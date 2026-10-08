@@ -8,43 +8,9 @@ Source standards are **tiered**:
   SuperSummary, etc.) and owner-as-primary (hand-collected counts from a book or
   broadcast) are fine — just cite them plainly below.
 
-Document every data source here before ingesting it. Include enough detail
-that someone else could independently locate and verify the original data.
-
----
-
-## Source Template
-
-Copy and fill in for each source. The **How the source collects the data**,
-**How the source defines the data**, and **Methodology changes / series breaks**
-sections are required — they are what keep our analysis honest and prevent
-apples-to-oranges comparisons. Do not leave them blank; if something is genuinely
-not applicable or unknown, write "N/A" or "unknown" so it's clear it was considered.
-
-### [Source Name]
-- **Publisher:** [Agency, organization, or author]
-- **URL:** [Direct link to the file or page]
-- **Format:** [CSV | JSON | HTML table | ZIP | PDF | hand-curated]
-- **License:** [Public domain | CC0 | CC-BY | proprietary | etc.]
-- **Fields used:** [Column names or description of what was extracted]
-- **Coverage:** [Geographic scope, date range, or other relevant bounds]
-- **How the source collects the data:** [How does the publisher actually gather it?
-  Survey / administrative records / registration / model estimate / scraped, etc.
-  For surveys: sampling frame, sample size, response rate. For counts: the universe
-  and denominator. Who is included and who is excluded from the raw collection?]
-- **How the source defines the data:** [How is the thing being measured *defined*?
-  Spell out the judgment calls in what counts. Example: a "COVID death" can mean died
-  *from* COVID (underlying cause) vs. died *with* COVID (contributing/any mention) —
-  very different counts. Note the exact definition this source uses.]
-- **Methodology changes / series breaks:** [Dates when the definition or collection
-  method changed, and which time periods are therefore NOT directly comparable.
-  If the whole series is consistent, say so explicitly. This is the flag that stops
-  us from charting a pre-change number next to a post-change number as if they match.]
-- **Known controversies / debates:** [Any contested measurement choices worth a
-  footnote or caveat in a published chart. Optional but encouraged. "None known" is
-  a valid answer once you've checked.]
-- **Notes:** [Anything else — data-quality quirks, suppression rules, imputation, etc.]
-- **Retrieved:** [YYYY-MM-DD]
+This file documents every data source behind the published charts and dataset,
+with enough detail that someone else could independently locate and verify the
+original data.
 
 ---
 
@@ -106,10 +72,9 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
   subtitle that uses genre and in the export codebook.)
 - **URL:** API base https://api.themoviedb.org/3 (endpoints `/3/find/{imdb_id}`,
   `/3/search/movie`, `/3/genre/movie/list`).
-- **Format:** JSON over the TMDB v3 REST API. An API key is required; it is stored
-  in the project's **gitignored `.env`** as `TMDB_API_KEY` and is never printed,
-  logged, or committed. Per-film responses are cached under `data/raw/tmdb/`
-  (gitignored) so re-runs are offline.
+- **Format:** JSON over the TMDB v3 REST API. An API key is required and is kept
+  out of version control (never printed, logged, or committed). Per-film responses
+  were cached locally so re-runs are offline.
 - **License:** TMDB API Terms of Use — free for non-commercial use with the
   attribution above. The genre labels are TMDB's.
 - **Fields used:** `primary_genre` only — the **first** genre of the matched
@@ -144,10 +109,9 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
   are legitimately multi-genre — e.g. *The Silence of the Lambs* is commonly tagged
   Crime/Thriller/Horror and *Oppenheimer* Biography/Drama/History — but each is
   charted under its single TMDB primary genre only. This caveat is carried in the
-  README prose above the charts (independent chart-validation recommendation,
-  2026-10-08) so a reader isn't surprised that a film they think of as another
-  genre shows as Drama. Rare genres are binned into "Other" for legibility (see
-  codebook).
+  README prose above the charts so a reader isn't surprised that a film they think
+  of as another genre shows as Drama. Rare genres are binned into "Other" for
+  legibility (see codebook).
 - **Notes:** `primary_genre` is populated for **major-award films only**; it is
   NULL for non-major wins in the export (documented in the codebook).
 - **Retrieved:** 2026-10-08
@@ -172,28 +136,18 @@ Picture)` (1920s one-offs superseded by `DIRECTING`), `ASSISTANT DIRECTOR`,
 `WRITING (Original Story)` and `WRITING (Title Writing)` (early/auxiliary writing
 awards — Original/Adapted Screenplay are the modern screenplay majors), and every
 craft (`Production`), `Music`, short-film, documentary, and honorary category. This
-boundary is encoded once as `MAJOR_CATEGORIES` in the `02-clean` step and reused.
+boundary is applied consistently across the whole dataset.
 
 ---
 
 ## Notes on Data Quality
 
-- All source files are saved verbatim to `data/raw/` and never modified.
-- Discrepancies between sources should be noted here and resolved explicitly.
-- **Series breaks:** whenever a source changed its definition or method mid-series,
-  document the break date under that source and treat pre/post as separate series —
-  never chart or aggregate across a break without a visible caveat.
-- **Definitions drive comparisons:** before comparing two numbers (across years,
-  places, or sources), confirm they are defined the same way. If not, say so in the
-  chart, the codebook, and any social copy.
-
----
-
-## Source Provenance in DuckDB
-
-Every table in `data/project.duckdb` has a corresponding entry in the
-`_sources` metadata table:
-
-```sql
-SELECT * FROM _sources;
-```
+- Original source files are preserved verbatim and never modified in place.
+- **Series breaks:** over 98 years the Academy added, retired, and renamed
+  categories, so an empty category × decade cell means the category did not exist
+  that decade, not zero wins. The 2020s is an in-progress decade (data through the
+  2025 ceremony).
+- **Definitions drive comparisons:** the win count, the competitive-vs-honorary
+  split, the category normalization, and the single-first-TMDB-genre choice are all
+  spelled out above and in the codebook, so the numbers in the charts are defined
+  the same way across every decade.
