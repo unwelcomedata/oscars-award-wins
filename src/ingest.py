@@ -309,3 +309,45 @@ def ingest_source(
         return parse_html_scrape(html, row_selector, field_map)
 
     raise ValueError(f"Unknown source type '{source_type}'. Use: html_table, html_scrape, csv, json.")
+
+
+# ---------------------------------------------------------------------------
+# Project-specific ingest: the Oscars award dataset (TAB-separated)
+# ---------------------------------------------------------------------------
+
+def ingest_oscars(cfg: dict, rate_limit_seconds: float = 1.0) -> pd.DataFrame:
+    """Download the DLu/oscar_data `oscars.csv` and return it UNtransformed.
+
+    The file is **tab-separated** (despite the `.csv` extension), so it is read
+    with ``sep="\\t"``. Nothing is cleaned or reshaped here — this is the raw
+    stage: one row per Academy Award nomination, all 14 source columns intact.
+    Cleaning happens in ``02-clean``.
+
+    The raw file is cached to ``data/raw/oscars.csv`` via ``download_file``; if a
+    cached copy already exists it is reused (no network request), so re-runs are
+    free. A polite ``rate_limit_seconds`` delay is applied before any network
+    fetch.
+
+    Args:
+        cfg:                Loaded config dict (from ``load_config()``).
+        rate_limit_seconds: Minimum delay before a network download (>= 1.0s).
+
+    Returns:
+        The raw nominations DataFrame (12,137 rows x 14 columns).
+    """
+    source = cfg["sources"]["oscars"]
+    url: str = source["url"]
+    dest = raw_path(cfg, "oscars.csv")
+
+    if dest.exists():
+        print(f"Using cached raw file -> {dest}")
+    else:
+        time.sleep(max(rate_limit_seconds, 1.0))  # polite delay before fetching
+        download_file(url, dest)
+        print(f"Downloaded -> {dest}")
+
+    # TAB-separated, NOT comma. keep_default_na so the blank Winner cells read as
+    # NaN (non-winner) and True reads as a winner — no transformation applied.
+    df = pd.read_csv(dest, sep="\t", encoding=cfg["settings"]["encoding"])
+    print(f"Read {len(df):,} rows x {df.shape[1]} columns (raw, untransformed)")
+    return df

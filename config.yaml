@@ -15,17 +15,14 @@ settings:
   duckdb_file: data/project.duckdb   # single file DB for the project
 
 sources:
-  # Define each data source here before ingesting.
-  # url:        full URL to fetch
-  # type:       html_table | html_scrape | csv | json
-  # table_index: (html_table only) zero-based index of the target <table>
-  # js_render:  true if the page requires Playwright (JS-rendered)
-  # Example:
-  # fatalities:
-  #   url: https://example.gov/data/fatalities
-  #   type: html_table
-  #   table_index: 0
-  #   js_render: false
+  # Academy Awards nominations + winners, 1st (1927/28) .. 98th (2025) ceremonies.
+  # NOTE: the file is TAB-SEPARATED despite the .csv extension — ingest_oscars()
+  # reads it with sep='\t'. Facts derive from the AMPAS Awards Database + IMDb.
+  oscars:
+    url: https://raw.githubusercontent.com/DLu/oscar_data/main/oscars.csv
+    type: csv
+    tab_separated: true   # read with sep='\t' (see src/ingest.ingest_oscars)
+    rate_limit_seconds: 1.0
 
 export:
   formats:

@@ -50,7 +50,50 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
 
 ## Sources
 
-<!-- Add your sources below this line -->
+### DLu/oscar_data — `oscars.csv`
+- **Publisher:** DLu/oscar_data (David V. Lu), compiled from the Academy of Motion
+  Picture Arts & Sciences (AMPAS) Awards Database and IMDb.
+- **URL:**
+  - Raw file: https://raw.githubusercontent.com/DLu/oscar_data/main/oscars.csv
+  - Repository: https://github.com/DLu/oscar_data
+  - Underlying primary source: https://awardsdatabase.oscars.org/
+- **Format:** TSV (tab-separated values, despite the `.csv` extension).
+- **License:** BSD 2-Clause for the compilation/code (© 2022 David V. Lu). The
+  underlying facts are from the AMPAS Awards Database + IMDb datasets. This is a
+  fun-tier pop-culture project; the compilation is authoritative-primary-backed,
+  well above the fun-tier crowd-sourced bar.
+- **Fields used:** `Ceremony` (ordinal 1..98), `Year` (string, e.g. `1927/28` …
+  `2025`), `Class` (8 broad groupings), `CanonicalCategory` (normalized category
+  name across the years), `Winner` (boolean: `True` for a win, blank for a
+  non-winning nomination). `Category`, `Film`, `Name` are carried in the raw/export
+  but not charted.
+- **Coverage:** 1st ceremony (1927/28) through the 98th (2025). 12,137 nomination
+  rows; 3,515 are wins (`Winner == True`).
+- **How the source collects the data:** AMPAS publishes official nomination and
+  winner results in its Awards Database; DLu/oscar_data parses those results and
+  enriches each row with IMDb identifiers. One row per nomination.
+- **How the source defines the data:** A **win** = one row with `Winner == True`.
+  A tie yields two winner rows (both `True`); a multi-film / multi-nominee win is
+  still one row. `CanonicalCategory` collapses the many wording changes of the same
+  award over the decades (e.g. the leading-acting categories) so a category reads as
+  one continuous series; `Category` keeps the exact Oscars.org wording.
+- **Methodology changes / series breaks:** Over 98 years, categories were **added,
+  retired, and renamed** — so for any category × decade grid an **empty cell means
+  the category did not exist that decade, NOT zero wins**. Two of the eight `Class`
+  groupings are **non-competitive**: **SciTech** (all 919 rows are `Winner == True`
+  — Scientific & Technical awards have no competitive nomination, every entry is a
+  recipient) and **Special** (378 of 384 `True` — honorary / governors awards).
+  These are **excluded** from the competitive heatmap (counting them as "wins" would
+  create artificially hot cells); the six competitive classes are Title, Acting,
+  Directing, Writing, Production, and Music.
+- **Known controversies / debates:** None material for a wins-by-category count.
+  The only interpretive choices are the competitive-vs-honorary split and the
+  category-normalization, both documented above and in the codebook.
+- **Notes:** `Year` must be parsed to a numeric ceremony year — for a slash span
+  like `1927/28` take the latter 4-digit year (`1928`); a plain `2025` stays `2025`.
+  `decade = (year_int // 10) * 10`. Multi-value fields (Nominees, NomineeIds) are
+  pipe (`|`)-separated in the raw file.
+- **Retrieved:** 2026-10-08
 
 ---
 
