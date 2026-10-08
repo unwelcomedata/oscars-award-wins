@@ -1,24 +1,31 @@
 """Build notebooks/03-prepare.ipynb for the oscars-award-wins project.
 
-Two jobs, both from the interim `oscars_clean` table, entirely in DuckDB SQL:
+GENRE RE-FLOW. Two jobs, both from the interim `major_wins_genre` table (the 756
+major-award wins with TMDB `primary_genre` attached in 02-clean), entirely in
+DuckDB SQL:
 
-  Job 1 — OWN the chart-ready heatmap tables (materialized in DuckDB AND saved to
-          data/processed/). Each is long/tidy (row, column, value), one row per
-          cell. GENUINELY-ABSENT (row, col) pairs are left as MISSING ROWS (not
-          value=0) so the shared heatmap template renders those cells EMPTY. The
-          three tables:
-            chart_wins_class_by_decade    — 6 competitive Class rows x decade
-            chart_wins_canoncat_by_decade — top-N CanonicalCategory rows x decade
-            chart_wins_class_by_year      — 6 competitive Class rows x year_int
-  Job 2 — export the sellable per-win dataset (CSV + Excel + Parquet) with a
-          plain-English codebook for every column.
+  Job 1 — OWN the chart-ready GENRE tables (materialized in DuckDB AND saved to
+          data/processed/). `04-viz` ONLY consumes these — it never shapes chart
+          data off the interim table. The genre BINNING (top-N + "Other") lives
+          HERE (it is data shaping). The three tables:
+            genre_bin                     — primary_genre -> binned label map
+            chart_major_genre_by_year     — (canonical_category, year_int,
+                                             primary_genre_binned): the LEAD
+                                             categorical grid (one cell per major
+                                             category x year, colored by genre).
+            chart_genre_wins_by_decade    — (primary_genre_binned, decade, wins):
+                                             count heatmap, which genres win majors.
+            chart_bestpic_genre_by_decade — (primary_genre_binned, decade, wins):
+                                             Best Picture only, genre mix by decade.
+  Job 2 — re-export the sellable per-win dataset (CSV + Excel + Parquet) INCLUDING
+          the new `primary_genre` column, with a plain-English codebook.
 
-`04-viz` ONLY consumes these tables. If a new cut is needed, it is added HERE and
-03 is re-run — never shaped inside 04.
+If a new cut is needed, it is added HERE and 03 is re-run — never shaped in 04.
 
 Regenerate with:  .venv/bin/python scripts/_build_nb_03_prepare.py
 Then execute with: .venv/bin/python -m jupyter nbconvert --to notebook \
-    --execute --inplace --ExecutePreprocessor.timeout=1800 notebooks/03-prepare.ipynb
+    --execute --inplace --ExecutePreprocessor.kernel_name=oscars-venv \
+    --ExecutePreprocessor.timeout=1800 notebooks/03-prepare.ipynb
 """
 from pathlib import Path
 
@@ -38,49 +45,52 @@ cells = []
 
 # ── Cell 0 — title ──────────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-# 03 — Prepare: chart-ready heatmap tables + sellable export
+# 03 — Prepare: chart-ready GENRE tables + sellable export
 
-Two **jobs**, both built from the interim `oscars_clean` table (the ~3.5k wins)
+The win-count grids barely moved decade to decade, so this re-flow pivots to
+**film genre**: *which genres win the major awards, and how that shifts over the
+decades.* Two **jobs**, both built from the interim **`major_wins_genre`** table
+(the 756 major-award wins with TMDB `primary_genre` attached in `02-clean`),
 entirely in **DuckDB SQL**:
 
-**Job 1 — OWN the chart-ready tables** (materialized in DuckDB *and* saved to
-`data/processed/`). `04-viz` will **only consume** these — it never shapes chart
-data off the interim table — so the heatmap inputs are settled here. Each table is
-**long/tidy: one row per `(row, column, value)` cell**, which is exactly what the
-shared `heatmap` template wants.
+**Job 1 — OWN the chart-ready genre tables** (materialized in DuckDB *and* saved to
+`data/processed/`). `04-viz` **only consumes** these — it never shapes chart data
+off the interim table. The genre **binning** (top-N genres + `"Other"`) is data
+shaping, so it lives **here**.
 
-| Table | Row axis | Column axis | Value |
+| Table | Row axis | Column axis | Cell |
 |---|---|---|---|
-| `chart_wins_class_by_decade` | 6 competitive `Class` groupings | decade | win count |
-| `chart_wins_canoncat_by_decade` | top-N `CanonicalCategory` | decade | win count |
-| `chart_wins_class_by_year` | 6 competitive `Class` groupings | `year_int` | win count |
+| `chart_major_genre_by_year` | 8 major `canonical_category` | `year_int` | binned primary genre (categorical) |
+| `chart_genre_wins_by_decade` | binned primary genre | decade | win count |
+| `chart_bestpic_genre_by_decade` | binned primary genre | decade | Best Picture win count |
 
-**The sparse-cell rule (load-bearing):** a `(row, column)` pair that had **no
-wins because the category did not exist that period** is left as a **MISSING ROW**,
-not a `value = 0` row. A `GROUP BY` naturally omits empty combinations, so the
-template renders those cells **empty** (category absent), which is the honest read
-— categories were added and retired across 98 years.
+**Sparse-cell rule (load-bearing):** a `(row, column)` pair with no major win that
+period is a **MISSING ROW**, not a `value = 0` / blank-category row, so the
+templates render those cells **empty** (not a filled color / not a zero).
 
-**Job 2 — export the sellable package**: the per-win dataset (not the aggregates)
-as CSV + Excel + Parquet with a plain-English codebook for every column.
+**Job 2 — re-export the sellable package**: the per-win dataset as CSV + Excel +
+Parquet with a codebook, now **including `primary_genre`** (populated for
+major-award films only).
 """))
 
 # ── Cell 1 — shaping choices ────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ## The shaping choices (why these cuts)
 
-- **Decade bins, not raw years, for the headline.** 98 individual years make an
-  unreadable grid; binning into decades (1920s … 2020s, ~11 columns) keeps the
-  "seasons" legible. A raw-year version (`chart_wins_class_by_year`) is also built
-  so `04-viz` can show the owner the decade-vs-year framing trade-off side by side.
-- **Competitive classes only.** SciTech and Special are non-competitive (every
-  SciTech entry is a "winner"), so including them would create artificially hot
-  cells. The headline grid uses the **6 competitive `Class` groupings** — Title,
-  Acting, Directing, Writing, Production, Music.
-- **`CanonicalCategory`, not `Category`, for the specific-award cut.**
-  `CanonicalCategory` collapses the many wording changes of the same award over the
-  decades, so each category reads as one continuous series. Capped to the **top-N by
-  total wins** so the grid stays ≤ ~15 rows.
+- **Genre binning lives here.** TMDB assigns many genres; a legend of 15 colors is
+  unreadable. We keep the **top-N primary genres by frequency among major winners**
+  and bin the rest — plus any unmatched (`NULL`) genre — into **`"Other"`**, so the
+  legend stays ≤ ~9 colors + Other (the shared categorical palette holds 10). The
+  binned label (`primary_genre_binned`) is what every chart table uses.
+- **Lead = per-year grid, colored by genre.** The owner asked for *"cut 3's shape
+  (category × year) but with a legend instead of labels."* So the lead table has
+  **rows = the 8 major categories, columns = `year_int`, cell = the binned genre of
+  that category's winning film that year** — the input to the new
+  `categorical_grid` template (color = genre, legend off to the side, no numbers).
+- **Decade count heatmaps for the magnitude story.** `chart_genre_wins_by_decade`
+  (all majors) and `chart_bestpic_genre_by_decade` (Best Picture only) are
+  long/tidy counts for the existing sequential `heatmap` template — "which genres
+  win, by decade" and "how the Best Picture genre mix shifts."
 - **A win = one row with `Winner = TRUE`** (already filtered in `02-clean`); a tie
   is two winner rows. Counts are honest win counts.
 """))
@@ -103,186 +113,245 @@ from src.prepare import package_dataset
 cfg = load_config("config.yaml")
 con = get_connection(cfg)
 print("Project:", cfg["project_name"])
-print("oscars_clean rows:", con.execute("SELECT COUNT(*) FROM oscars_clean").fetchone()[0])
+print("major_wins_genre rows:", con.execute("SELECT COUNT(*) FROM major_wins_genre").fetchone()[0])
 
-# The 6 competitive Class groupings, in a sensible display order.
-COMPETITIVE_CLASSES = ["Title", "Acting", "Directing", "Writing", "Production", "Music"]
-print("Competitive classes:", COMPETITIVE_CLASSES)
+# How many distinct genres to keep as their own color before binning to "Other".
+# The shared categorical palette holds 10 colors; keep the top 8 + Other = 9.
+TOP_N_GENRES = 8
+print("Top-N genres kept (rest -> 'Other'):", TOP_N_GENRES)
 """))
 
-# ── Cell 3 — chart_wins_class_by_decade ──────────────────────────────────────
+# ── Cell 3 — genre_bin map ───────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-## Job 1 · Table 1 — `chart_wins_class_by_decade` (the headline grid)
+## Job 1 · the genre binning map — `genre_bin`
 
-Long/tidy `(class, decade, wins)` — one row per competitive-class × decade
-combination that actually had wins. Rows = the 6 competitive `Class` groupings;
-columns = decade; value = win count. Any class × decade with no wins is simply
-absent (the `GROUP BY` omits it) → the template draws an empty cell.
+Rank primary genres by how often they win a major, keep the top-N as themselves,
+and map everything else — **including unmatched (`NULL`) genres** — to `"Other"`.
+Both chart tables join this map so they share one consistent binned label.
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
+# Top-N primary genres by major-win frequency; the rest (and NULL) -> "Other".
 con.execute(\"\"\"
-    CREATE OR REPLACE TABLE chart_wins_class_by_decade AS
+    CREATE OR REPLACE TABLE genre_bin AS
+    WITH ranked AS (
+        SELECT primary_genre, COUNT(*) AS n
+        FROM major_wins_genre
+        WHERE primary_genre IS NOT NULL
+        GROUP BY primary_genre
+        ORDER BY n DESC
+    ),
+    topn AS (SELECT primary_genre FROM ranked LIMIT ?)
     SELECT
-        class,
-        decade,
-        COUNT(*) AS wins
-    FROM oscars_clean
-    WHERE competitive
-    GROUP BY class, decade
-    ORDER BY class, decade
-\"\"\")
-t1 = run_sql("SELECT * FROM chart_wins_class_by_decade", con)
-save_processed(t1, cfg, "chart_wins_class_by_decade.parquet")
-print("rows:", len(t1), "| classes:", sorted(t1['class'].unique()),
-      "| decades:", sorted(t1['decade'].unique()))
-t1.head()
+        r.primary_genre,
+        CASE WHEN t.primary_genre IS NOT NULL THEN r.primary_genre ELSE 'Other' END
+            AS primary_genre_binned,
+        r.n
+    FROM ranked r
+    LEFT JOIN topn t USING (primary_genre)
+    ORDER BY r.n DESC
+\"\"\", [TOP_N_GENRES])
+genre_bin = run_sql("SELECT * FROM genre_bin ORDER BY n DESC", con)
+save_processed(genre_bin, cfg, "genre_bin.parquet")
+print("Distinct primary genres:", len(genre_bin),
+      "| kept as themselves:", (genre_bin['primary_genre_binned'] != 'Other').sum(),
+      "| binned to Other:", (genre_bin['primary_genre_binned'] == 'Other').sum())
+print(genre_bin.to_string(index=False))
 """))
 
-# ── Cell 4 — chart_wins_canoncat_by_decade ───────────────────────────────────
+# ── Cell 4 — chart_major_genre_by_year (LEAD) ────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-## Job 1 · Table 2 — `chart_wins_canoncat_by_decade` (categories appearing/retiring)
+## Job 1 · Table A (LEAD) — `chart_major_genre_by_year`
 
-Long/tidy `(canonical_category, decade, wins)` for the **top-N competitive
-canonical categories by total wins** (capped at 15 rows). This is the "seasons"
-story: categories that appear partway through history and categories that retire
-show up as **empty cells** at the start or end of their row — because those
-`(category, decade)` pairs are genuinely absent, not zero.
+The input to the lead `categorical_grid`: **one row per `(canonical_category,
+year_int)`** major win, carrying the **binned primary genre** of the winning film.
+Rows = the 8 major categories, columns = year, cell category = genre. A film with
+no genre match maps to `"Other"` via `genre_bin` (NULLs are folded, never left as
+a blank category). Absent `(category, year)` pairs stay **missing** → the grid
+draws them empty.
+
+Note: for a given category × year there is normally one winning film (ties are
+rare); if two winner rows share a category+year the first by film title is kept so
+each cell is unique (the grid shows one genre per cell).
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
-# Top-15 competitive canonical categories by total wins, then their per-decade
-# counts. Absent (category, decade) pairs are NOT emitted (no value=0 rows), so
-# the heatmap renders them empty.
 con.execute(\"\"\"
-    CREATE OR REPLACE TABLE chart_wins_canoncat_by_decade AS
-    WITH top_cats AS (
-        SELECT canonical_category
-        FROM oscars_clean
-        WHERE competitive
-        GROUP BY canonical_category
-        ORDER BY COUNT(*) DESC
-        LIMIT 15
+    CREATE OR REPLACE TABLE chart_major_genre_by_year AS
+    WITH labelled AS (
+        SELECT
+            m.canonical_category,
+            m.year_int,
+            m.film,
+            COALESCE(b.primary_genre_binned, 'Other') AS primary_genre_binned
+        FROM major_wins_genre m
+        LEFT JOIN genre_bin b USING (primary_genre)
+    ),
+    one_per_cell AS (
+        SELECT *,
+               ROW_NUMBER() OVER (
+                   PARTITION BY canonical_category, year_int ORDER BY film
+               ) AS rn
+        FROM labelled
     )
-    SELECT
-        o.canonical_category,
-        o.decade,
-        COUNT(*) AS wins
-    FROM oscars_clean o
-    JOIN top_cats t USING (canonical_category)
-    WHERE o.competitive
-    GROUP BY o.canonical_category, o.decade
-    ORDER BY o.canonical_category, o.decade
+    SELECT canonical_category, year_int, primary_genre_binned
+    FROM one_per_cell
+    WHERE rn = 1
+    ORDER BY canonical_category, year_int
 \"\"\")
-t2 = run_sql("SELECT * FROM chart_wins_canoncat_by_decade", con)
-save_processed(t2, cfg, "chart_wins_canoncat_by_decade.parquet")
-print("rows:", len(t2), "| distinct categories:", t2['canonical_category'].nunique())
-print("\\nWins per category (totals):")
-print(t2.groupby('canonical_category')['wins'].sum().sort_values(ascending=False).to_string())
+tA = run_sql("SELECT * FROM chart_major_genre_by_year", con)
+save_processed(tA, cfg, "chart_major_genre_by_year.parquet")
+print("rows:", len(tA),
+      "| categories:", tA['canonical_category'].nunique(),
+      "| years:", tA['year_int'].nunique(),
+      "| genres:", sorted(tA['primary_genre_binned'].unique()))
+tA.head()
 """))
 
-# ── Cell 5 — chart_wins_class_by_year ────────────────────────────────────────
+# ── Cell 5 — chart_genre_wins_by_decade ──────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-## Job 1 · Table 3 — `chart_wins_class_by_year` (the decade-vs-year comparison)
+## Job 1 · Table B — `chart_genre_wins_by_decade` (which genres win, by decade)
 
-Same as table 1 but columns = `year_int` instead of decade. This exists so
-`04-viz` can show the owner the **decade-bin vs raw-year** framing trade-off: the
-year grid is far wider (98 columns) and sparser, which is exactly the legibility
-argument for binning into decades.
+Long/tidy `(primary_genre_binned, decade, wins)` = COUNT of **all** major-award
+wins per binned genre per decade. The "which genres win the majors, over the
+decades" magnitude view (existing sequential `heatmap`). Absent `(genre, decade)`
+pairs stay missing (empty cell = that genre won nothing that decade).
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
 con.execute(\"\"\"
-    CREATE OR REPLACE TABLE chart_wins_class_by_year AS
+    CREATE OR REPLACE TABLE chart_genre_wins_by_decade AS
     SELECT
-        class,
-        year_int,
+        COALESCE(b.primary_genre_binned, 'Other') AS primary_genre_binned,
+        m.decade,
         COUNT(*) AS wins
-    FROM oscars_clean
-    WHERE competitive
-    GROUP BY class, year_int
-    ORDER BY class, year_int
+    FROM major_wins_genre m
+    LEFT JOIN genre_bin b USING (primary_genre)
+    GROUP BY 1, 2
+    ORDER BY 1, 2
 \"\"\")
-t3 = run_sql("SELECT * FROM chart_wins_class_by_year", con)
-save_processed(t3, cfg, "chart_wins_class_by_year.parquet")
-print("rows:", len(t3), "| distinct years:", t3['year_int'].nunique())
-t3.head()
+tB = run_sql("SELECT * FROM chart_genre_wins_by_decade", con)
+save_processed(tB, cfg, "chart_genre_wins_by_decade.parquet")
+print("rows:", len(tB), "| genres:", tB['primary_genre_binned'].nunique(),
+      "| decades:", sorted(tB['decade'].unique()))
+print("\\nWins per genre (totals):")
+print(tB.groupby('primary_genre_binned')['wins'].sum().sort_values(ascending=False).to_string())
 """))
 
-# ── Cell 6 — chart-table QC ──────────────────────────────────────────────────
+# ── Cell 6 — chart_bestpic_genre_by_decade ───────────────────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+## Job 1 · Table C — `chart_bestpic_genre_by_decade` (Best Picture genre mix)
+
+Long/tidy `(primary_genre_binned, decade, wins)` restricted to **Best Picture**
+winners only (the headline category) — so the owner can see how the Best Picture
+genre mix shifts over the decades. Count heatmap on the existing template.
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+con.execute(\"\"\"
+    CREATE OR REPLACE TABLE chart_bestpic_genre_by_decade AS
+    SELECT
+        COALESCE(b.primary_genre_binned, 'Other') AS primary_genre_binned,
+        m.decade,
+        COUNT(*) AS wins
+    FROM major_wins_genre m
+    LEFT JOIN genre_bin b USING (primary_genre)
+    WHERE m.canonical_category = 'BEST PICTURE'
+    GROUP BY 1, 2
+    ORDER BY 1, 2
+\"\"\")
+tC = run_sql("SELECT * FROM chart_bestpic_genre_by_decade", con)
+save_processed(tC, cfg, "chart_bestpic_genre_by_decade.parquet")
+print("rows:", len(tC), "| genres:", tC['primary_genre_binned'].nunique(),
+      "| Best Picture wins total:", int(tC['wins'].sum()))
+print(tC.groupby('primary_genre_binned')['wins'].sum().sort_values(ascending=False).to_string())
+"""))
+
+# ── Cell 7 — chart-table QC ──────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ### QC the chart tables — fail loudly
 
-- all three tables carry exactly the `(row, column, value)` columns,
-- the class tables cover only the 6 competitive classes,
-- **no `value = 0` rows exist** (absent cells are missing rows, not zeros),
-- the total wins in `chart_wins_class_by_decade` equals the competitive win count
-  in `oscars_clean` (nothing dropped or double-counted).
+- the lead grid has exactly the `(canonical_category, year_int,
+  primary_genre_binned)` columns, one row per cell, only the 8 major categories,
+- the count tables carry `(primary_genre_binned, decade, wins)` with **no
+  `wins = 0`** rows (absent cells are missing, not zero) and no NULL genre labels
+  (NULLs were folded to `"Other"`),
+- the all-genre decade counts total **756** (every major win accounted for),
+- Best Picture counts total **98**.
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
-# No zero-value rows in any chart table (sparse cells must be ABSENT, not 0).
-for tbl, val in [("chart_wins_class_by_decade", "wins"),
-                 ("chart_wins_canoncat_by_decade", "wins"),
-                 ("chart_wins_class_by_year", "wins")]:
-    zeros = con.execute(f"SELECT COUNT(*) FROM {tbl} WHERE {val} = 0").fetchone()[0]
-    assert zeros == 0, f"{tbl} has {zeros} value=0 rows (should be absent, not zero)"
-    assert con.execute(f"SELECT COUNT(*) FROM {tbl} WHERE {val} IS NULL").fetchone()[0] == 0
+MAJORS = {"BEST PICTURE", "DIRECTING",
+          "ACTOR IN A LEADING ROLE", "ACTRESS IN A LEADING ROLE",
+          "ACTOR IN A SUPPORTING ROLE", "ACTRESS IN A SUPPORTING ROLE",
+          "WRITING (Adapted Screenplay)", "WRITING (Original Screenplay)"}
 
-# class tables cover only the 6 competitive classes
-for tbl in ("chart_wins_class_by_decade", "chart_wins_class_by_year"):
-    classes = set(r[0] for r in con.execute(f"SELECT DISTINCT class FROM {tbl}").fetchall())
-    assert classes <= set(COMPETITIVE_CLASSES), f"{tbl} has non-competitive classes: {classes}"
+# Lead grid: one row per (category, year); only major categories; no NULL genre.
+lead_cats = set(r[0] for r in con.execute(
+    "SELECT DISTINCT canonical_category FROM chart_major_genre_by_year").fetchall())
+assert lead_cats <= MAJORS, f"lead grid has non-major categories: {lead_cats - MAJORS}"
+dup = con.execute(
+    "SELECT COUNT(*) FROM (SELECT canonical_category, year_int, COUNT(*) c "
+    "FROM chart_major_genre_by_year GROUP BY 1,2 HAVING COUNT(*) > 1)").fetchone()[0]
+assert dup == 0, f"lead grid has {dup} duplicate (category, year) cells"
+assert con.execute(
+    "SELECT COUNT(*) FROM chart_major_genre_by_year WHERE primary_genre_binned IS NULL"
+).fetchone()[0] == 0
 
-# totals reconcile: class-by-decade wins == competitive wins in oscars_clean
-comp_wins = con.execute("SELECT COUNT(*) FROM oscars_clean WHERE competitive").fetchone()[0]
-grid_wins = con.execute("SELECT SUM(wins) FROM chart_wins_class_by_decade").fetchone()[0]
-assert comp_wins == grid_wins, f"win totals disagree: clean={comp_wins} grid={grid_wins}"
-print(f"QC OK — no zero/null cells, competitive classes only, "
-      f"{grid_wins} competitive wins reconcile.")
+# Count tables: no zero rows, no null genre labels.
+for tbl in ("chart_genre_wins_by_decade", "chart_bestpic_genre_by_decade"):
+    assert con.execute(f"SELECT COUNT(*) FROM {tbl} WHERE wins = 0").fetchone()[0] == 0, \
+        f"{tbl} has wins=0 rows (should be absent, not zero)"
+    assert con.execute(f"SELECT COUNT(*) FROM {tbl} WHERE wins IS NULL").fetchone()[0] == 0
+    assert con.execute(f"SELECT COUNT(*) FROM {tbl} WHERE primary_genre_binned IS NULL").fetchone()[0] == 0
+
+# Totals reconcile.
+all_decade = con.execute("SELECT SUM(wins) FROM chart_genre_wins_by_decade").fetchone()[0]
+assert all_decade == 756, f"all-genre decade total should be 756, got {all_decade}"
+bp = con.execute("SELECT SUM(wins) FROM chart_bestpic_genre_by_decade").fetchone()[0]
+assert bp == 98, f"Best Picture total should be 98, got {bp}"
+print(f"QC OK — lead grid unique cells, no zero/null rows, "
+      f"{all_decade} majors + {bp} Best Picture reconcile.")
 """))
 
-# ── Cell 7 — sanity figures ──────────────────────────────────────────────────
+# ── Cell 8 — sanity figures ──────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ### Sanity figures the exploration will cite
-
-The hottest class × decade cells, and the categories that start/stop partway
-through history (the sparse-cell story).
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
-print("Top class x decade cells by wins:")
-print(run_sql("SELECT class, decade, wins FROM chart_wins_class_by_decade "
-              "ORDER BY wins DESC LIMIT 8", con).to_string(index=False))
+print("Top genres among ALL major winners:")
+print(run_sql("SELECT primary_genre_binned, SUM(wins) AS wins "
+              "FROM chart_genre_wins_by_decade GROUP BY 1 ORDER BY 2 DESC", con).to_string(index=False))
 
-print("\\nFirst and last decade each top category appears (empty before/after = absent):")
-print(run_sql(
-    "SELECT canonical_category, MIN(decade) AS first_decade, "
-    "MAX(decade) AS last_decade, SUM(wins) AS total_wins "
-    "FROM chart_wins_canoncat_by_decade GROUP BY canonical_category "
-    "ORDER BY total_wins DESC", con).to_string(index=False))
+print("\\nBest Picture genre mix by decade (wins):")
+print(run_sql("SELECT decade, primary_genre_binned, wins "
+              "FROM chart_bestpic_genre_by_decade ORDER BY decade, wins DESC", con).to_string(index=False))
 """))
 
-# ── Cell 8 — export ─────────────────────────────────────────────────────────
+# ── Cell 9 — export ─────────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-## Job 2 — sellable export + codebook
+## Job 2 — sellable export + codebook (now WITH `primary_genre`)
 
-Export the clean **per-win** dataset (not the aggregates) from `oscars_clean` as
-CSV + Excel + Parquet (per `config.yaml` `export.formats`), with a codebook
-describing every column in plain English. `package_dataset()` calls `strip_pii()`
-internally — `strip_pii_columns` is empty in config, so it's a no-op (public
-pop-culture data). Export name: **`oscars_award_wins_v1`**.
+Re-export the per-win dataset from `oscars_clean`, LEFT JOINing TMDB
+`primary_genre` on `film_id`. Genre was looked up for **major-award films only**,
+so `primary_genre` is populated for those and **NULL for non-major films** (stated
+plainly in the codebook). CSV + Excel + Parquet (per `config.yaml`), codebook for
+every column. Export name: **`oscars_award_wins_v1`**.
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
 export_df = con.execute(\"\"\"
     SELECT
-        ceremony, year_int, decade,
-        class, competitive,
-        canonical_category, category,
-        film, name
-    FROM oscars_clean
-    ORDER BY year_int, class, canonical_category
+        o.ceremony, o.year_int, o.decade,
+        o.class, o.competitive,
+        o.canonical_category, o.category,
+        o.film, o.name,
+        o.film_id,
+        g.primary_genre
+    FROM oscars_clean o
+    LEFT JOIN tmdb_genres_raw g USING (film_id)
+    ORDER BY o.year_int, o.class, o.canonical_category
 \"\"\").df()
 
 codebook = {
@@ -295,14 +364,22 @@ codebook = {
     "category": "Exact category wording as published by the Academy for that ceremony.",
     "film": "Film associated with the win (may be empty for some honorary/non-film categories).",
     "name": "Person(s) or entity credited with the win (may be empty for some categories).",
+    "film_id": "IMDb title identifier (e.g. tt0019071) for the winning film; the first id when an award covers multiple films (pipe-separated in the source).",
+    "primary_genre": ("Primary film genre (TMDB genres[0]), looked up by IMDb id; "
+                      "populated for MAJOR-award films only (Best Picture, Directing, "
+                      "the four acting awards, and the two screenplay awards) and NULL "
+                      "for all other wins. Source: TMDB (this product uses the TMDB API "
+                      "but is not endorsed or certified by TMDB)."),
 }
 
 notes = \"\"\"Source: DLu/oscar_data (David V. Lu), oscars.csv — Academy Awards nominations +
 winners, compiled from the AMPAS Awards Database (https://awardsdatabase.oscars.org/)
 and IMDb. License: BSD 2-Clause for the compilation; underlying facts from AMPAS/IMDb.
-Scope: WINS ONLY (one row per winning award), 1st ceremony (1927/28) through the 98th
-(2025). A win = one row with Winner=True; a tie yields two winner rows. SciTech and
-Special are non-competitive (every entry a recipient) and are flagged competitive=False.
+Film genre is from The Movie Database (TMDB): this product uses the TMDB API but is not
+endorsed or certified by TMDB; primary_genre = TMDB genres[0], populated for major-award
+films only. Scope: WINS ONLY (one row per winning award), 1st ceremony (1927/28) through
+the 98th (2025). A win = one row with Winner=True; a tie yields two winner rows. SciTech
+and Special are non-competitive (every entry a recipient) and are flagged competitive=False.
 This is a fun-tier pop-culture dataset; see SOURCES.md.\"\"\"
 
 written = package_dataset(export_df, cfg, name="oscars_award_wins_v1",
@@ -310,48 +387,52 @@ written = package_dataset(export_df, cfg, name="oscars_award_wins_v1",
 written
 """))
 
-# ── Cell 9 — provenance ──────────────────────────────────────────────────────
+# ── Cell 10 — provenance ─────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ### Register provenance for the processed chart tables
 
-Record the three `chart_*` tables in `_sources` so the project keeps full
-provenance for everything `04-viz` reads (all derived from `oscars_clean`,
-ultimately DLu/oscar_data + AMPAS/IMDb).
+Record the genre `chart_*` tables (and the `genre_bin` map) in `_sources` so the
+project keeps full provenance for everything `04-viz` reads (all derived from
+`major_wins_genre` = DLu/oscar_data + AMPAS/IMDb + TMDB genre).
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
-for t in ["chart_wins_class_by_decade", "chart_wins_canoncat_by_decade",
-          "chart_wins_class_by_year"]:
+for t in ["genre_bin", "chart_major_genre_by_year",
+          "chart_genre_wins_by_decade", "chart_bestpic_genre_by_decade"]:
     register_source(
         con, t,
-        name="DLu/oscar_data (derived)",
+        name="DLu/oscar_data + TMDB (derived)",
         url="https://github.com/DLu/oscar_data",
-        license="BSD 2-Clause (compilation); facts from AMPAS Awards Database + IMDb",
-        notes=("Chart-ready long/tidy (row, column, value) heatmap table built in "
-               "03-prepare from oscars_clean. Competitive wins only. Absent "
-               "(row, column) pairs are MISSING rows (not value=0) so empty cells "
-               "render empty = category absent that period."),
-        methodology=("Aggregated in DuckDB SQL as COUNT(*) of winning rows grouped "
-                     "by the row axis (class or canonical_category) and the column "
-                     "axis (decade or year_int). Decade = (year_int // 10) * 10."),
-        series_breaks=("Categories added/retired/renamed over 98 years, so empty "
-                       "cells = category did not exist that period, NOT zero wins."),
+        license="BSD 2-Clause (compilation) + TMDB API terms (genre); facts from AMPAS + IMDb",
+        notes=("Chart-ready genre table built in 03-prepare from major_wins_genre "
+               "(the 756 major-award wins with TMDB primary_genre). Primary genre "
+               "binned to the top-8 + 'Other'. Absent (row, column) pairs are "
+               "MISSING rows (not value=0 / not a blank category) so empty cells "
+               "render empty. This product uses the TMDB API but is not endorsed "
+               "or certified by TMDB."),
+        methodology=("Built in DuckDB SQL from major_wins_genre: the lead grid is "
+                     "one row per (canonical_category, year_int) carrying the binned "
+                     "genre; the decade tables COUNT wins by binned genre x decade "
+                     "(all majors, and Best Picture only). Decade = (year_int//10)*10."),
+        series_breaks=("TMDB genres are present-day labels, not release-era marketing "
+                       "genres. Categories were added/retired over 98 years, so empty "
+                       "cells = no major win of that genre/category that period."),
     )
 print(run_sql("SELECT duckdb_table, source_name FROM _sources ORDER BY duckdb_table",
               con).to_string(index=False))
 """))
 
-# ── Cell 10 — next ───────────────────────────────────────────────────────────
+# ── Cell 11 — next ───────────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ---
-**Next:** `04-viz.ipynb` — explore the heatmaps by **consuming** these `chart_*`
-tables (opening the DB read-only, never re-shaping off interim data): class ×
-decade (headline), canonical-category × decade (appearing/retiring categories),
-class × year (the decade-vs-year framing comparison), and a warm-palette variant.
+**Next:** `04-viz.ipynb` — explore the GENRE story by **consuming** these `chart_*`
+tables (opening the DB read-only, never re-shaping off interim data): the LEAD
+per-year categorical grid (major winners colored by genre, with a legend), the
+genre × decade count heatmap, and the Best Picture genre-mix heatmap.
 **Pause for owner review of the framing before `06-viz-social`.**
 """))
 
-# ── Cell 11 — cleanup ────────────────────────────────────────────────────────
+# ── Cell 12 — cleanup ────────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ---
 ## Cleanup

@@ -24,6 +24,19 @@ sources:
     tab_separated: true   # read with sep='\t' (see src/ingest.ingest_oscars)
     rate_limit_seconds: 1.0
 
+  # TMDB (The Movie Database) — film GENRE enrichment for the major-award
+  # winners. Matched by IMDb id (/3/find/{imdb_id}?external_source=imdb_id),
+  # with a title+year search fallback. API key lives in the GITIGNORED .env as
+  # TMDB_API_KEY (never committed). Primary genre only (genres[0]). Per-film
+  # JSON cached under data/raw/tmdb/ so re-runs are offline.
+  # Attribution (required): "This product uses the TMDB API but is not endorsed
+  # or certified by TMDB."
+  tmdb:
+    url: https://api.themoviedb.org/3
+    type: api
+    api_key_env: TMDB_API_KEY   # read from gitignored .env, never committed
+    rate_limit_seconds: 0.3
+
 export:
   formats:
     - csv

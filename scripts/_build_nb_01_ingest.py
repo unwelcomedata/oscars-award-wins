@@ -46,7 +46,7 @@ os.chdir(PROJECT)
 sys.path.insert(0, str(PROJECT))
 
 from src.ingest import load_config, ingest_oscars
-from src.clean_quality import get_connection, load_to_duckdb, register_source
+from src.clean_quality import get_connection, load_to_duckdb, register_source, run_sql
 import pandas as pd
 
 cfg = load_config("config.yaml")
@@ -164,14 +164,175 @@ print(con.execute(
 ).df().to_string(index=False))
 """))
 
-# ── Cell 6 — summary / next ─────────────────────────────────────────────────
+# ── Cell 6 — TMDB enrichment: source section ────────────────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+## Source: TMDB (film genre enrichment)
+
+The win-count heatmaps barely move decade to decade, so this re-flow enriches the
+data with **film genre** — *which genres win the major awards, and how that shifts
+over the decades.* Genre comes from **[The Movie Database (TMDB)](https://www.themoviedb.org/)**.
+
+> *This product uses the TMDB API but is not endorsed or certified by TMDB.*
+
+**External enrichment via an API is INGESTION, not cleaning**, so it enters here
+in `01-ingest`. How it works:
+
+- **API key** — read from the project's **gitignored `.env`** as `TMDB_API_KEY`
+  (via `load_env`). The key is **never printed, logged, or committed**; the cells
+  below reference it only as `TMDB_API_KEY loaded from the gitignored .env`.
+- **Matching (deterministic first)** — the Oscars dataset carries an IMDb id per
+  film (`FilmId`, already `tt`-prefixed), so the **primary match is
+  `/3/find/{FilmId}?external_source=imdb_id`** (an exact IMDb-id lookup, no title
+  ambiguity). A **title + ceremony-year search** is the **fallback** only when
+  `/find` returns nothing. For the 2 major rows with a pipe-separated `FilmId`
+  (multi-film award) the **first** id is used.
+- **Primary genre only** — we keep `genres[0]` (TMDB's first genre) per film; the
+  owner asked for primary genre only.
+- **Scope** — only the **unique films that won a MAJOR award** are looked up
+  (464 distinct films), not all 3,515 wins. A film that won several majors is
+  fetched once.
+- **Caching** — every TMDB response lands untouched under `data/raw/tmdb/`
+  (gitignored) so re-runs are fully **offline**; a polite ≥ 0.3s delay precedes
+  each live call.
+
+**Major-award definition** (the 8 headline categories, 756 winning rows):
+`BEST PICTURE`, `DIRECTING`, `ACTOR`/`ACTRESS IN A LEADING ROLE`,
+`ACTOR`/`ACTRESS IN A SUPPORTING ROLE`, `WRITING (Adapted Screenplay)`,
+`WRITING (Original Screenplay)`. (Full list + exclusions in `SOURCES.md`.)
+"""))
+
+# ── Cell 7 — load key + genre map, show ONE representative /find call ─────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+### Load the API key and show one representative `/find` call
+
+Load `TMDB_API_KEY` from the gitignored `.env`, fetch TMDB's genre id→name map
+once, then run a **single representative** `/3/find/{imdb_id}` call inline so the
+mechanics are visible — printing the resolved **primary genre**, never the key.
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+from src.ingest import (
+    load_env, tmdb_genre_map, tmdb_find_by_imdb_id, enrich_major_award_genres,
+)
+
+env = load_env(".env")  # populates os.environ; returns {KEY: value} (never printed)
+TMDB_API_KEY = env.get("TMDB_API_KEY") or os.environ.get("TMDB_API_KEY")
+assert TMDB_API_KEY, (
+    "TMDB_API_KEY not found. Add it to the gitignored .env as "
+    "TMDB_API_KEY=<your key> (copied from highest-grossing-films/.env)."
+)
+print("TMDB_API_KEY loaded from the gitignored .env:", bool(TMDB_API_KEY))
+
+# Genre id -> name map (one memoized call).
+gmap = tmdb_genre_map(TMDB_API_KEY)
+print("TMDB genre taxonomy:", sorted(gmap.values()))
+
+# One representative /find call — a well-known Best Picture winner by IMDb id.
+# (tt0109830 = Forrest Gump.) Prints the resolved primary genre, NOT the key.
+demo = tmdb_find_by_imdb_id("tt0109830", TMDB_API_KEY, cfg)
+print("\\nRepresentative /3/find/{imdb_id} result:")
+print("  imdb_id:", demo["imdb_id"], "| tmdb_title:", demo["tmdb_title"])
+print("  genres:", demo["genres"], "| primary_genre:", demo["primary_genre"],
+      "| matched:", demo["matched"])
+"""))
+
+# ── Cell 8 — enrich the unique major-award films ─────────────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+### Enrich the unique major-award films
+
+Build the list of **unique** major-award-winning films (first id of a
+pipe-separated `FilmId`), run the IMDb-id → genre lookup (with the title+year
+fallback), and land the untransformed result in DuckDB as **`tmdb_genres_raw`**
+(one row per unique film). The join onto the per-award winning rows happens in
+`02-clean`.
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+# Major-award CanonicalCategory values (the 8 headline categories).
+MAJOR_CATEGORIES = [
+    "BEST PICTURE", "DIRECTING",
+    "ACTOR IN A LEADING ROLE", "ACTRESS IN A LEADING ROLE",
+    "ACTOR IN A SUPPORTING ROLE", "ACTRESS IN A SUPPORTING ROLE",
+    "WRITING (Adapted Screenplay)", "WRITING (Original Screenplay)",
+]
+_in = ", ".join("'" + c.replace("'", "''") + "'" for c in MAJOR_CATEGORIES)
+
+# Unique winning films among the majors: first id of a pipe-separated FilmId,
+# one representative title + ceremony year for the fallback search.
+unique_films = con.execute(f\"\"\"
+    SELECT
+        split_part(TRIM(FilmId), '|', 1)                       AS film_id,
+        ANY_VALUE(TRIM(Film))                                  AS film,
+        CAST(ANY_VALUE(
+            CASE WHEN Year LIKE '%/%'
+                 THEN LEFT(Year, 2) || RIGHT(Year, 2)
+                 ELSE Year END) AS INTEGER)                    AS year_int
+    FROM oscars_raw
+    WHERE Winner = TRUE
+      AND CanonicalCategory IN ({_in})
+      AND FilmId IS NOT NULL AND TRIM(FilmId) <> ''
+    GROUP BY split_part(TRIM(FilmId), '|', 1)
+    ORDER BY film_id
+\"\"\").df()
+print(f"Unique major-award films to look up: {len(unique_films)}")
+
+# IMDb-id match (primary) with title+year fallback; cached under data/raw/tmdb/.
+tmdb_genres_raw = enrich_major_award_genres(unique_films, TMDB_API_KEY, cfg,
+                                            rate_limit_seconds=0.3)
+load_to_duckdb(tmdb_genres_raw, "tmdb_genres_raw", con)
+print(f"tmdb_genres_raw: {len(tmdb_genres_raw):,} unique films loaded into DuckDB")
+
+matched = int(tmdb_genres_raw["matched"].sum())
+print(f"Matched (any method): {matched}/{len(tmdb_genres_raw)} "
+      f"({matched/len(tmdb_genres_raw):.1%})")
+print("Match method breakdown:")
+print(tmdb_genres_raw["match_method"].value_counts().to_string())
+print("\\nPrimary-genre distribution (unique films):")
+print(tmdb_genres_raw["primary_genre"].value_counts(dropna=False).to_string())
+"""))
+
+# ── Cell 9 — register TMDB source ────────────────────────────────────────────
+cells.append(nbformat.v4.new_code_cell("""\
+register_source(
+    con,
+    "tmdb_genres_raw",
+    "The Movie Database (TMDB)",
+    url="https://www.themoviedb.org/",
+    license="TMDB API Terms — free non-commercial use; attribution required",
+    notes=(
+        "This product uses the TMDB API but is not endorsed or certified by TMDB. "
+        "Film genre enrichment for the UNIQUE major-award-winning films (464). "
+        "Primary genre = genres[0] (TMDB's first genre). Matched by IMDb id "
+        "(/3/find/{imdb_id}?external_source=imdb_id) with a title+year search "
+        "(/3/search/movie) fallback. API key in the gitignored .env; raw responses "
+        "cached under data/raw/tmdb/."
+    ),
+    retrieved="2026-10-08",
+    methodology=(
+        "For each unique major-award film (first id of a pipe-separated FilmId), "
+        "resolve the TMDB movie by exact IMDb id first; fall back to a title + "
+        "ceremony-year search only if /find returns no movie result. Keep genres[0]."
+    ),
+    series_breaks=(
+        "TMDB genres are PRESENT-DAY labels from the current TMDB taxonomy, not the "
+        "contemporaneous (release-era) marketing genre. Treat genre as a consistent "
+        "modern lens across all decades."
+    ),
+)
+print("TMDB source registered in _sources.")
+print(run_sql("SELECT duckdb_table, source_name FROM _sources ORDER BY duckdb_table", con).to_string(index=False))
+"""))
+
+# ── Cell 10 — summary / next ─────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ---
 **Next:** `02-clean.ipynb` — keep the winner rows, parse `Year` to a numeric
-ceremony year + decade, flag competitive vs honorary classes, and save interim.
+ceremony year + decade, flag competitive vs honorary classes, **carry `FilmId`
+through so the genre join can happen**, join TMDB `primary_genre` onto the
+major-award wins, **report the match rate**, and save interim.
 """))
 
-# ── Cell 7 — cleanup ────────────────────────────────────────────────────────
+# ── Cell 11 — cleanup ────────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ---
 ## Cleanup

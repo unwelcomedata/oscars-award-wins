@@ -95,6 +95,75 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
   pipe (`|`)-separated in the raw file.
 - **Retrieved:** 2026-10-08
 
+### The Movie Database (TMDB) — film genre enrichment
+- **Publisher:** The Movie Database (TMDB), https://www.themoviedb.org/
+- **Required attribution:** *"This product uses the TMDB API but is not endorsed
+  or certified by TMDB."* (TMDB's attribution requirement; carried in every chart
+  subtitle that uses genre and in the export codebook.)
+- **URL:** API base https://api.themoviedb.org/3 (endpoints `/3/find/{imdb_id}`,
+  `/3/search/movie`, `/3/genre/movie/list`).
+- **Format:** JSON over the TMDB v3 REST API. An API key is required; it is stored
+  in the project's **gitignored `.env`** as `TMDB_API_KEY` and is never printed,
+  logged, or committed. Per-film responses are cached under `data/raw/tmdb/`
+  (gitignored) so re-runs are offline.
+- **License:** TMDB API Terms of Use — free for non-commercial use with the
+  attribution above. The genre labels are TMDB's.
+- **Fields used:** `primary_genre` only — the **first** genre of the matched
+  movie (`genres[0]`, i.e. the first entry of TMDB's `genre_ids`). The full genre
+  list and `tmdb_id` are kept in the cached JSON for provenance but do not flow
+  downstream.
+- **Coverage:** looked up for the **unique films that won a MAJOR award** (see the
+  major-award definition below) — 464 distinct films — not all 3,515 wins. A film
+  that won several majors is fetched once; its genre is joined back onto each of
+  its winning rows.
+- **How the source collects the data:** TMDB is a community-maintained movie
+  database; genres are assigned by TMDB's contributors/editors from a fixed TMDB
+  genre taxonomy (Drama, Comedy, Action, Romance, etc.).
+- **How the source defines the data:** "Primary genre" here is **TMDB's first
+  listed genre** for the film (`genres[0]`). TMDB lists multiple genres per film;
+  we deliberately keep only the first (owner decision: *primary genre only*). This
+  is a single, reproducible label, not a judgment about the film's "true" genre.
+- **Match method:** the IMDb id carried by the Oscars dataset (`FilmId`, already
+  `tt`-prefixed) is matched to TMDB with **`/3/find/{FilmId}?external_source=imdb_id`
+  as the PRIMARY, deterministic match** (no title ambiguity). A **title + ceremony-year
+  search (`/3/search/movie`) is used only as a FALLBACK** when `/find` returns no
+  movie result. For the 2 major rows whose `FilmId` is pipe-separated
+  (multi-film award), the **first** id is used for the genre lookup (the award is
+  one win; genre is attributed to the primary/first film).
+- **Methodology changes / series breaks:** TMDB genres are **present-day labels**
+  from the current TMDB taxonomy — they are the modern genre classification, not
+  the contemporaneous (release-era) marketing genre. A 1930s Best Picture carries
+  the genre TMDB assigns it today. Treat the genre as a consistent modern lens
+  across all decades, not as how the film was marketed at the time.
+- **Known controversies / debates:** genre is inherently fuzzy and a film often
+  spans several; using only the first TMDB genre is a simplification. Rare genres
+  are binned into "Other" for legibility in the charts (see codebook).
+- **Notes:** `primary_genre` is populated for **major-award films only**; it is
+  NULL for non-major wins in the export (documented in the codebook).
+- **Retrieved:** 2026-10-08
+
+#### Major-award definition (used for the genre enrichment)
+"Major awards" = the eight headline `CanonicalCategory` values, enumerated from
+the data (756 winning rows total):
+
+| CanonicalCategory | Class | Wins |
+|---|---|---|
+| BEST PICTURE | Title | 98 |
+| DIRECTING | Directing | 97 |
+| ACTOR IN A LEADING ROLE | Acting | 99 |
+| ACTRESS IN A LEADING ROLE | Acting | 99 |
+| ACTOR IN A SUPPORTING ROLE | Acting | 90 |
+| ACTRESS IN A SUPPORTING ROLE | Acting | 90 |
+| WRITING (Adapted Screenplay) | Writing | 98 |
+| WRITING (Original Screenplay) | Writing | 85 |
+
+**Deliberately excluded** (not "major" in this sense): `DIRECTING (Comedy/Dramatic
+Picture)` (1920s one-offs superseded by `DIRECTING`), `ASSISTANT DIRECTOR`,
+`WRITING (Original Story)` and `WRITING (Title Writing)` (early/auxiliary writing
+awards — Original/Adapted Screenplay are the modern screenplay majors), and every
+craft (`Production`), `Music`, short-film, documentary, and honorary category. This
+boundary is encoded once as `MAJOR_CATEGORIES` in the `02-clean` step and reused.
+
 ---
 
 ## Notes on Data Quality

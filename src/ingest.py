@@ -351,3 +351,230 @@ def ingest_oscars(cfg: dict, rate_limit_seconds: float = 1.0) -> pd.DataFrame:
     df = pd.read_csv(dest, sep="\t", encoding=cfg["settings"]["encoding"])
     print(f"Read {len(df):,} rows x {df.shape[1]} columns (raw, untransformed)")
     return df
+
+
+# ---------------------------------------------------------------------------
+# Environment / secrets (.env) — no python-dotenv dependency
+# ---------------------------------------------------------------------------
+
+def load_env(env_path: str | Path = ".env") -> dict[str, str]:
+    """Load KEY=VALUE lines from a .env file into os.environ and return them.
+
+    Ignores blank lines and comments. Does not overwrite already-set vars.
+    Never logs values. The .env file is gitignored — keys stay local.
+    """
+    import os
+    env: dict[str, str] = {}
+    p = Path(env_path)
+    if not p.exists():
+        return env
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k, v = k.strip(), v.strip()
+        env[k] = v
+        os.environ.setdefault(k, v)
+    return env
+
+
+# ---------------------------------------------------------------------------
+# TMDB genre enrichment (cached + rate-limited)
+# ---------------------------------------------------------------------------
+# External enrichment via an API is INGESTION, not cleaning (per workspace
+# norms), so the TMDB lookups live here in src/ingest.py and are narrated in
+# 01-ingest. The TMDB v3 API key is read from the gitignored .env as
+# TMDB_API_KEY (load_env) — it is NEVER printed, logged, or committed.
+#
+# Matching strategy (deterministic first):
+#   PRIMARY  — GET /3/find/{imdb_id}?external_source=imdb_id (exact IMDb-id match)
+#   FALLBACK — GET /3/search/movie?query=title&year=... (only if /find misses)
+# "Primary genre" = genres[0] (TMDB's genre_ids order). Every call is cached per
+# film as JSON under data/raw/tmdb/ so re-runs are fully offline.
+
+_TMDB_BASE = "https://api.themoviedb.org/3"
+_tmdb_genre_map: dict[int, str] | None = None
+
+
+def _tmdb_cache_dir(cfg: dict) -> Path:
+    """Return (creating) the per-film TMDB JSON cache dir under data/raw/tmdb/."""
+    d = Path(cfg["paths"]["data_raw"]) / "tmdb"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def tmdb_genre_map(api_key: str) -> dict[int, str]:
+    """Return TMDB's genre id -> name mapping (fetched once, memoized)."""
+    global _tmdb_genre_map
+    if _tmdb_genre_map is None:
+        resp = requests.get(
+            f"{_TMDB_BASE}/genre/movie/list",
+            params={"api_key": api_key}, timeout=20,
+        )
+        resp.raise_for_status()
+        _tmdb_genre_map = {g["id"]: g["name"] for g in resp.json()["genres"]}
+    return _tmdb_genre_map
+
+
+def _safe_slug(title: str, year: int | None) -> str:
+    import re
+    s = re.sub(r"[^A-Za-z0-9]+", "_", str(title)).strip("_").lower()
+    return f"{s}_{year or 'na'}"
+
+
+def tmdb_find_by_imdb_id(
+    imdb_id: str,
+    api_key: str,
+    cfg: dict,
+    rate_limit_seconds: float = 0.3,
+) -> dict[str, Any]:
+    """PRIMARY matcher: resolve a film's TMDB primary genre by its IMDb id.
+
+    Uses GET /3/find/{imdb_id}?external_source=imdb_id — an exact IMDb-id lookup
+    (no title ambiguity). Reads movie_results[0]; maps its genre_ids to names via
+    tmdb_genre_map; primary_genre = the first genre name (or None). Cached per id
+    under data/raw/tmdb/find_{imdb_id}.json so re-runs are offline.
+
+    Returns {imdb_id, tmdb_id, tmdb_title, genres (list[str]), primary_genre,
+    matched (bool)}. ``matched`` is False when /find returns no movie_results.
+    """
+    cache_path = _tmdb_cache_dir(cfg) / f"find_{imdb_id}.json"
+    if cache_path.exists():
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+
+    time.sleep(rate_limit_seconds)  # polite
+    resp = requests.get(
+        f"{_TMDB_BASE}/find/{imdb_id}",
+        params={"api_key": api_key, "external_source": "imdb_id"}, timeout=20,
+    )
+    resp.raise_for_status()
+    results = resp.json().get("movie_results", [])
+
+    gmap = tmdb_genre_map(api_key)
+    if results:
+        top = results[0]
+        genres = [gmap.get(i) for i in top.get("genre_ids", []) if gmap.get(i)]
+        rec = {
+            "imdb_id": imdb_id,
+            "tmdb_id": top.get("id"),
+            "tmdb_title": top.get("title"),
+            "genres": genres,
+            "primary_genre": genres[0] if genres else None,
+            "matched": True,
+        }
+    else:
+        rec = {
+            "imdb_id": imdb_id, "tmdb_id": None, "tmdb_title": None,
+            "genres": [], "primary_genre": None, "matched": False,
+        }
+    cache_path.write_text(json.dumps(rec), encoding="utf-8")
+    return rec
+
+
+def tmdb_lookup_movie(
+    title: str,
+    year: int | None,
+    api_key: str,
+    cfg: dict,
+    rate_limit_seconds: float = 0.3,
+) -> dict[str, Any]:
+    """FALLBACK matcher: look up a film on TMDB by title (+year) search.
+
+    Used only when ``tmdb_find_by_imdb_id`` returns no movie_results (a film with
+    no usable IMDb id, or an id TMDB doesn't carry). GET /3/search/movie with the
+    title and (optional) year; takes the first result. Cached per title+year
+    under data/raw/tmdb/ so re-runs are offline.
+
+    Returns {title, year, tmdb_id, tmdb_title, genres (list[str]), primary_genre,
+    matched (bool)}.
+    """
+    cache_path = _tmdb_cache_dir(cfg) / f"{_safe_slug(title, year)}.json"
+    if cache_path.exists():
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+
+    time.sleep(rate_limit_seconds)  # polite
+    params = {"api_key": api_key, "query": title}
+    if year:
+        params["year"] = year
+    resp = requests.get(f"{_TMDB_BASE}/search/movie", params=params, timeout=20)
+    resp.raise_for_status()
+    results = resp.json().get("results", [])
+
+    gmap = tmdb_genre_map(api_key)
+    if results:
+        top = results[0]
+        genres = [gmap.get(i) for i in top.get("genre_ids", []) if gmap.get(i)]
+        rec = {
+            "title": title, "year": year,
+            "tmdb_id": top.get("id"),
+            "tmdb_title": top.get("title"),
+            "genres": genres,
+            "primary_genre": genres[0] if genres else None,
+            "matched": True,
+        }
+    else:
+        rec = {
+            "title": title, "year": year, "tmdb_id": None, "tmdb_title": None,
+            "genres": [], "primary_genre": None, "matched": False,
+        }
+    cache_path.write_text(json.dumps(rec), encoding="utf-8")
+    return rec
+
+
+def enrich_major_award_genres(
+    unique_films: pd.DataFrame,
+    api_key: str,
+    cfg: dict,
+    rate_limit_seconds: float = 0.3,
+) -> pd.DataFrame:
+    """Attach a TMDB primary genre to each UNIQUE major-award-winning film.
+
+    ``unique_films`` is a DataFrame with one row per distinct film, columns:
+      - ``film_id``  : the IMDb id to match on (first id of a pipe-separated
+                       FilmId; already 'tt'-prefixed in this dataset),
+      - ``film``     : film title (fallback search),
+      - ``year_int`` : ceremony year as int (fallback search year).
+
+    Per film: try the deterministic IMDb-id match (``tmdb_find_by_imdb_id``);
+    only if that misses, fall back to a title+year search (``tmdb_lookup_movie``).
+    Every TMDB response is cached under data/raw/tmdb/ so re-runs are offline;
+    a polite ``rate_limit_seconds`` (>= 0.3s) precedes each LIVE call.
+
+    Returns a tidy DataFrame
+    ``[film_id, film, year_int, tmdb_id, primary_genre, matched, match_method]``,
+    one row per unique film. ``match_method`` is 'imdb_id', 'title_year', or
+    'none'. The caller (02-clean) joins ``primary_genre`` back onto the per-award
+    winning rows by ``film_id`` and reports the match rate.
+    """
+    recs = []
+    for _, r in unique_films.iterrows():
+        film_id = (str(r["film_id"]).strip() if r.get("film_id") is not None else "")
+        title = r.get("film")
+        year = r.get("year_int")
+        year = int(year) if pd.notna(year) else None
+
+        rec = {"film_id": film_id, "film": title, "year_int": year,
+               "tmdb_id": None, "primary_genre": None, "matched": False,
+               "match_method": "none"}
+
+        if film_id:
+            found = tmdb_find_by_imdb_id(film_id, api_key, cfg, rate_limit_seconds)
+            if found["matched"]:
+                rec.update(tmdb_id=found["tmdb_id"],
+                           primary_genre=found["primary_genre"],
+                           matched=True, match_method="imdb_id")
+
+        if not rec["matched"] and title:
+            alt = tmdb_lookup_movie(title, year, api_key, cfg, rate_limit_seconds)
+            if alt["matched"]:
+                rec.update(tmdb_id=alt["tmdb_id"],
+                           primary_genre=alt["primary_genre"],
+                           matched=True, match_method="title_year")
+
+        recs.append(rec)
+
+    return pd.DataFrame(recs, columns=[
+        "film_id", "film", "year_int", "tmdb_id",
+        "primary_genre", "matched", "match_method",
+    ])

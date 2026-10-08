@@ -50,9 +50,17 @@ What this notebook does, and why:
 - **Flag `competitive`** = FALSE for `Class IN ('SciTech','Special')` (the
   non-competitive honorary/technical classes — all SciTech rows are "winners"), TRUE
   otherwise. The headline heatmap uses competitive classes only.
+- **Carry `FilmId`** through (as `film_id`, first id of a pipe-separated multi-film
+  award) — the previous build dropped it; the TMDB genre join needs it.
 - **snake_case** the kept columns, **TRIM** text, and **dedupe**.
 
-Output: interim Parquet `data/interim/oscars_clean.parquet` via `save_interim()`.
+Then, for the **genre re-flow**: join TMDB `primary_genre` (from
+`tmdb_genres_raw`, built in `01-ingest`) onto the **major-award wins** by
+`film_id`, build the interim table **`major_wins_genre`**, and **report the match
+rate** (how many major films got a genre; investigate the unmatched).
+
+Output: interim Parquet `data/interim/oscars_clean.parquet` and
+`data/interim/major_wins_genre.parquet` via `save_interim()`.
 """))
 
 # ── Cell 1 — setup ──────────────────────────────────────────────────────────
@@ -105,6 +113,10 @@ con.execute(\"\"\"
         TRIM(Category)                                     AS category,
         TRIM(Film)                                         AS film,
         TRIM(Name)                                         AS name,
+        -- Carry the IMDb id so the TMDB genre join can happen (first id of a
+        -- pipe-separated multi-film FilmId); keep the full raw string too.
+        split_part(TRIM(FilmId), '|', 1)                   AS film_id,
+        NULLIF(TRIM(FilmId), '')                           AS film_id_raw,
         CAST(
             CASE WHEN Year LIKE '%/%'
                  THEN LEFT(Year, 2) || RIGHT(Year, 2)   -- '1927/28' -> '1928'
@@ -189,24 +201,145 @@ print(run_sql(
     "GROUP BY class, competitive ORDER BY n_wins DESC", con).to_string(index=False))
 """))
 
+# ── Cell 5b — major_wins_genre (genre join) + match rate ─────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+## 5. Genre re-flow — join TMDB `primary_genre` onto the major-award wins
+
+Build the interim table **`major_wins_genre`** entirely in DuckDB: filter
+`oscars_clean` to the **8 major `CanonicalCategory` values** and `LEFT JOIN`
+`tmdb_genres_raw` (from `01-ingest`) on `film_id` to attach `primary_genre`. One
+row per major-award win, carrying `year_int, decade, class, canonical_category,
+film, name, film_id, primary_genre`.
+
+Then **report the match rate** — distinct major films, how many got a
+`primary_genre`, and the unmatched films (title + year + id) so a low rate can be
+investigated.
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+# The 8 major CanonicalCategory values (encoded once, reused). Must match the
+# MAJOR_CATEGORIES list in 01-ingest and the definition in SOURCES.md.
+MAJOR_CATEGORIES = [
+    "BEST PICTURE", "DIRECTING",
+    "ACTOR IN A LEADING ROLE", "ACTRESS IN A LEADING ROLE",
+    "ACTOR IN A SUPPORTING ROLE", "ACTRESS IN A SUPPORTING ROLE",
+    "WRITING (Adapted Screenplay)", "WRITING (Original Screenplay)",
+]
+_in = ", ".join("'" + c.replace("'", "''") + "'" for c in MAJOR_CATEGORIES)
+
+con.execute(f\"\"\"
+    CREATE OR REPLACE TABLE major_wins_genre AS
+    WITH majors AS (
+        SELECT year_int, decade, class, canonical_category, film, name, film_id
+        FROM oscars_clean
+        WHERE canonical_category IN ({_in})
+    )
+    SELECT
+        m.year_int, m.decade, m.class, m.canonical_category,
+        m.film, m.name, m.film_id,
+        g.primary_genre
+    FROM majors m
+    LEFT JOIN tmdb_genres_raw g USING (film_id)
+    ORDER BY m.year_int, m.canonical_category
+\"\"\")
+major_wins_genre = run_sql("SELECT * FROM major_wins_genre", con)
+print("major_wins_genre.shape:", major_wins_genre.shape)
+major_wins_genre.head()
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+# ── Match rate (films, not award rows) ───────────────────────────────────────
+mr = con.execute(\"\"\"
+    SELECT
+        COUNT(DISTINCT film_id)                                           AS n_films,
+        COUNT(DISTINCT film_id) FILTER (WHERE primary_genre IS NOT NULL)  AS n_matched
+    FROM major_wins_genre
+\"\"\").df()
+n_films  = int(mr["n_films"].iloc[0])
+n_matched = int(mr["n_matched"].iloc[0])
+rate = n_matched / n_films if n_films else 0.0
+print(f"TMDB genre match rate (unique major films): {n_matched}/{n_films} = {rate:.1%}")
+
+# Award-row coverage (one film can appear on several award rows the same year).
+rows_mr = con.execute(
+    "SELECT COUNT(*) AS total, "
+    "COUNT(*) FILTER (WHERE primary_genre IS NOT NULL) AS matched "
+    "FROM major_wins_genre").df()
+print(f"Major-award ROWS with a genre: {int(rows_mr['matched'].iloc[0])}/"
+      f"{int(rows_mr['total'].iloc[0])}")
+
+# Investigate the unmatched films (should be few / none).
+unmatched = con.execute(\"\"\"
+    SELECT DISTINCT film_id, film, year_int
+    FROM major_wins_genre
+    WHERE primary_genre IS NULL
+    ORDER BY year_int
+\"\"\").df()
+print(f"\\nUnmatched films: {len(unmatched)}")
+if len(unmatched):
+    print(unmatched.to_string(index=False))
+"""))
+
+cells.append(nbformat.v4.new_markdown_cell("""\
+### Match-rate interpretation
+
+The IMDb-id match (`/3/find`) is deterministic, so coverage should be high
+(≈ 100% of major films). Any unmatched film is printed above for investigation —
+typically a film TMDB lacks under that IMDb id, which then falls back to a
+title+year search in `01-ingest`. A genuinely unmatched film carries
+`primary_genre = NULL` and is binned into `"Other"` in `03-prepare` (never
+silently dropped). If the rate were to fall below ~95%, that would warrant a
+closer look before charting.
+"""))
+
+cells.append(nbformat.v4.new_markdown_cell("""\
+### QC the genre join — fail loudly
+
+- `major_wins_genre` has exactly **756** rows (the enumerated major-win count),
+- every row's `canonical_category` is one of the 8 major values,
+- the LEFT JOIN did not drop or duplicate any major row,
+- the null-genre rate equals the reported unmatched rate (nothing lost silently).
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+n_major = len(major_wins_genre)
+print("major rows:", n_major)
+assert n_major == 756, f"expected 756 major-win rows, got {n_major}"
+
+cats = set(r[0] for r in con.execute(
+    "SELECT DISTINCT canonical_category FROM major_wins_genre").fetchall())
+assert cats <= set(MAJOR_CATEGORIES), f"non-major categories present: {cats - set(MAJOR_CATEGORIES)}"
+
+# LEFT JOIN must preserve the major row count exactly (no fan-out, no loss).
+majors_only = con.execute(
+    f"SELECT COUNT(*) FROM oscars_clean WHERE canonical_category IN ({_in})"
+).fetchone()[0]
+assert majors_only == n_major, f"join changed row count: {majors_only} -> {n_major}"
+print("QC OK — 756 major wins, categories valid, join preserved every row.")
+"""))
+
 # ── Cell 6 — save interim ────────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
-## 5. Save interim Parquet
+## 6. Save interim Parquet
 
-Write `data/interim/oscars_clean.parquet` via `save_interim()`. This is the input
-to `03-prepare`, which builds the chart-ready (row, column, value) heatmap tables.
+Write `data/interim/oscars_clean.parquet` AND
+`data/interim/major_wins_genre.parquet` via `save_interim()`. These are the input
+to `03-prepare`, which OWNS the chart-ready tables (the genre grid + genre×decade
+heatmaps) and the sellable export.
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
 save_interim(oscars_clean, cfg, "oscars_clean.parquet")
+save_interim(major_wins_genre, cfg, "major_wins_genre.parquet")
 """))
 
 # ── Cell 7 — summary / next ──────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ---
-**Next:** `03-prepare.ipynb` — shape the long/tidy heatmap tables (class × decade,
-canonical-category × decade, class × year) from `oscars_clean` and export the
-sellable per-win dataset.
+**Next:** `03-prepare.ipynb` — bin the genres, OWN the chart-ready genre tables
+(per-year major winners colored by genre for the lead categorical grid; genre ×
+decade and Best-Picture-genre × decade count heatmaps) from `major_wins_genre`,
+and re-export the sellable per-win dataset **including `primary_genre`**.
 """))
 
 # ── Cell 8 — cleanup ─────────────────────────────────────────────────────────
