@@ -63,6 +63,7 @@ shaping, so it lives **here**.
 | `chart_major_genre_by_year` | 8 major `canonical_category` | `year_int` | binned primary genre (categorical) |
 | `chart_genre_wins_by_decade` | binned primary genre | decade | win count |
 | `chart_bestpic_genre_by_decade` | binned primary genre | decade | Best Picture win count |
+| `chart_wins_class_by_year` (cut 4) | 6 competitive `class` | `year_int` | competitive win count (pre-genre) |
 
 **Sparse-cell rule (load-bearing):** a `(row, column)` pair with no major win that
 period is a **MISSING ROW**, not a `value = 0` / blank-category row, so the
@@ -267,6 +268,48 @@ print("rows:", len(tC), "| genres:", tC['primary_genre_binned'].nunique(),
 print(tC.groupby('primary_genre_binned')['wins'].sum().sort_values(ascending=False).to_string())
 """))
 
+# ── Cell 6b — chart_wins_class_by_year (CUT 4) ───────────────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+## Job 1 · Table D (cut 4) — `chart_wins_class_by_year` (the ORIGINAL pre-genre count cut)
+
+This is the **original "cut 3" from the first exploration pass, before any genre
+enrichment**, re-added so `04-viz` can show it as **cut 4**. Long/tidy
+`(class, year_int, wins)` = the COUNT of **competitive** Oscar wins for each class
+in each ceremony year — the plain award-count grid, **no genre involved**.
+
+It is wide: **6 competitive classes × ~98 year columns**. In-cell numbers across
+~98 columns are unreadable, which is why it was deemed "too wide to post" the first
+time. The owner's fix: `04-viz` renders it with **no in-cell numbers and a
+color-scale legend** (the `heatmap` `show_values=False` mode) so color carries the
+count. `03` just produces the table; `04` consumes it read-only.
+
+Counting note (bug-trap): this is a direct `COUNT(*)` over `oscars_clean` (already
+filtered to winners in `02-clean`), grouped by `class, year_int` with
+`WHERE competitive`. It counts raw winning rows directly — **no `DISTINCT`** (a
+`DISTINCT` on a pruned column set previously collapsed tied wins). It uses
+`year_int` directly and adds **no new year/decade math** (so no `/` vs `//` trap).
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+# CUT 4: the original pre-genre count cut — competitive wins by class x year.
+con.execute(\"\"\"
+    CREATE OR REPLACE TABLE chart_wins_class_by_year AS
+    SELECT class, year_int, COUNT(*) AS wins
+    FROM oscars_clean
+    WHERE competitive
+    GROUP BY class, year_int
+    ORDER BY class, year_int
+\"\"\")
+tD = run_sql("SELECT * FROM chart_wins_class_by_year ORDER BY class, year_int", con)
+save_processed(tD, cfg, "chart_wins_class_by_year.parquet")
+print("rows:", len(tD),
+      "| classes:", sorted(tD['class'].unique()),
+      "| years:", tD['year_int'].nunique(),
+      "| total competitive wins:", int(tD['wins'].sum()),
+      "| wins range:", int(tD['wins'].min()), "-", int(tD['wins'].max()))
+tD.head()
+"""))
+
 # ── Cell 7 — chart-table QC ──────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ### QC the chart tables — fail loudly
@@ -277,7 +320,10 @@ cells.append(nbformat.v4.new_markdown_cell("""\
   `wins = 0`** rows (absent cells are missing, not zero) and no NULL genre labels
   (NULLs were folded to `"Other"`),
 - the all-genre decade counts total **756** (every major win accounted for),
-- Best Picture counts total **98**.
+- Best Picture counts total **98**,
+- the cut-4 count grid (`chart_wins_class_by_year`) has only the **6 competitive
+  classes**, **98 years**, **no `wins = 0`/NULL** rows, and totals **2218**
+  (every competitive win accounted for).
 """))
 
 cells.append(nbformat.v4.new_code_cell("""\
@@ -310,8 +356,24 @@ all_decade = con.execute("SELECT SUM(wins) FROM chart_genre_wins_by_decade").fet
 assert all_decade == 756, f"all-genre decade total should be 756, got {all_decade}"
 bp = con.execute("SELECT SUM(wins) FROM chart_bestpic_genre_by_decade").fetchone()[0]
 assert bp == 98, f"Best Picture total should be 98, got {bp}"
+
+# cut 4 — the original pre-genre count grid.
+COMPETITIVE_CLASSES = {"Acting", "Directing", "Music", "Production", "Title", "Writing"}
+cut4_classes = set(r[0] for r in con.execute(
+    "SELECT DISTINCT class FROM chart_wins_class_by_year").fetchall())
+assert cut4_classes == COMPETITIVE_CLASSES, \
+    f"cut 4 classes should be the 6 competitive classes, got {cut4_classes}"
+assert con.execute("SELECT COUNT(*) FROM chart_wins_class_by_year WHERE wins = 0").fetchone()[0] == 0, \
+    "cut 4 has wins=0 rows (should be absent, not zero)"
+assert con.execute("SELECT COUNT(*) FROM chart_wins_class_by_year WHERE wins IS NULL").fetchone()[0] == 0
+cut4_years = con.execute("SELECT COUNT(DISTINCT year_int) FROM chart_wins_class_by_year").fetchone()[0]
+assert cut4_years == 98, f"cut 4 should span 98 years, got {cut4_years}"
+cut4_total = con.execute("SELECT SUM(wins) FROM chart_wins_class_by_year").fetchone()[0]
+assert cut4_total == 2218, f"cut 4 competitive-win total should be 2218, got {cut4_total}"
+
 print(f"QC OK — lead grid unique cells, no zero/null rows, "
-      f"{all_decade} majors + {bp} Best Picture reconcile.")
+      f"{all_decade} majors + {bp} Best Picture reconcile; "
+      f"cut 4 = {cut4_total} competitive wins over {cut4_years} years.")
 """))
 
 # ── Cell 8 — sanity figures ──────────────────────────────────────────────────
@@ -418,6 +480,26 @@ for t in ["genre_bin", "chart_major_genre_by_year",
                        "genres. Categories were added/retired over 98 years, so empty "
                        "cells = no major win of that genre/category that period."),
     )
+
+# cut 4 — the original pre-genre count grid is NOT genre-derived: it is a plain
+# competitive-win count off oscars_clean (AMPAS/IMDb via DLu/oscar_data), no TMDB.
+register_source(
+    con, "chart_wins_class_by_year",
+    name="DLu/oscar_data (derived)",
+    url="https://github.com/DLu/oscar_data",
+    license="BSD 2-Clause (compilation); facts from AMPAS + IMDb",
+    notes=("Cut 4: the original pre-genre count grid built in 03-prepare — "
+           "COUNT of competitive Oscar wins by class x year_int, straight from "
+           "oscars_clean (no genre, no TMDB). 6 competitive classes x 98 years, "
+           "582 cells, 2218 wins total. Absent (class, year) pairs are MISSING "
+           "rows (not value=0) so empty cells render empty; rendered in 04-viz "
+           "with a color-scale legend instead of in-cell numbers."),
+    methodology=("Direct COUNT(*) over oscars_clean WHERE competitive, grouped by "
+                 "class, year_int. No DISTINCT (counts raw winning rows; a tie is "
+                 "two rows). year_int used directly, no new year/decade math."),
+    series_breaks=("Categories/classes were added and retired across 98 ceremonies, "
+                   "so a class absent in a given year is a MISSING cell, not a 0."),
+)
 print(run_sql("SELECT duckdb_table, source_name FROM _sources ORDER BY duckdb_table",
               con).to_string(index=False))
 """))
@@ -428,7 +510,9 @@ cells.append(nbformat.v4.new_markdown_cell("""\
 **Next:** `04-viz.ipynb` — explore the GENRE story by **consuming** these `chart_*`
 tables (opening the DB read-only, never re-shaping off interim data): the LEAD
 per-year categorical grid (major winners colored by genre, with a legend), the
-genre × decade count heatmap, and the Best Picture genre-mix heatmap.
+genre × decade count heatmap, the Best Picture genre-mix heatmap, and **cut 4**
+(the original pre-genre `chart_wins_class_by_year` count grid, rendered with a
+color-scale legend instead of in-cell numbers).
 **Pause for owner review of the framing before `06-viz-social`.**
 """))
 

@@ -46,17 +46,21 @@ the decades.* It **CONSUMES** the three chart-ready tables `03-prepare` built an
 renders them **read-only**; it builds **no** chart table (that is 03's job). Run
 `03-prepare.ipynb` first.
 
-**Three cuts explored:**
+**Four cuts explored:**
 1. **LEAD — per-year major winners, colored by genre** (`categorical_grid`): the
    8 major categories down the left, every ceremony year across the top, each cell
-   **colored by the winning film's primary genre**, with a **genre legend** off to
-   the side. This is the owner's *"cut 3 shape (category × year), but a legend
-   instead of in-cell labels"* — color carries the data, no numbers. Absent cells
-   (no major win that category+year) render empty.
+   **colored by the winning film's primary genre**, with a **genre legend in a
+   single row above the chart**. This is the owner's *"cut 3 shape (category ×
+   year), but a legend instead of in-cell labels"* — color carries the data, no
+   numbers. Absent cells (no major win that category+year) render empty.
 2. **Genre × decade — count of major wins** (`heatmap`, sequential teal): which
    genres win the majors, by decade. Magnitude view.
 3. **Best Picture genre mix by decade** (`heatmap`): how the Best Picture genre
    mix shifts over the decades.
+4. **Cut 4 — the original pre-genre count grid** (`heatmap`, `show_values=False`):
+   the 6 competitive classes × every year, cell = competitive win count, rendered
+   with a **color-scale legend instead of in-cell numbers** (the ~98-column grid is
+   too wide for readable digits). Re-added at the owner's request.
 
 These are **exploratory**. No `06-viz-social` work happens here — the framing is
 settled first, then social is built once the owner confirms the lineup.
@@ -94,6 +98,7 @@ _required = [
     "chart_major_genre_by_year",
     "chart_genre_wins_by_decade",
     "chart_bestpic_genre_by_decade",
+    "chart_wins_class_by_year",          # cut 4 (the original pre-genre count grid)
 ]
 _missing = [t for t in _required if t not in _tables]
 assert not _missing, (
@@ -114,8 +119,9 @@ cells.append(nbformat.v4.new_markdown_cell("""\
 The owner's ask: *"like cut 3 (category × year), but with a legend instead of
 labels."* Rows = the 8 major categories, columns = every ceremony year, and each
 cell is **colored by the primary genre** of that category's winning film that
-year. The **legend** (right) carries genre→color; there are **no in-cell
-numbers** — the color is the data. Genres are binned to the top-8 + `"Other"` (in
+year. The **legend** sits as a **single horizontal row above the chart**
+(`legend_loc="top"`), carrying genre→color; there are **no in-cell numbers** — the
+color is the data. Genres are binned to the top-8 + `"Other"` (in
 `03-prepare`) so the legend stays legible. Empty cells = no major win for that
 category that year (sparse = absent, not a color).
 """))
@@ -132,6 +138,7 @@ render_chart({
     "col_col": "year_int",
     "category_col": "primary_genre_binned",
     "legend_title": "Primary genre",
+    "legend_loc": "top",                # single horizontal legend row above the grid
     "col_label_fmt": lambda y: f"'{int(y) % 100:02d}",   # compact year label
     "title": "Primary genre of each major Oscar winner, year by year",
     "subtitle": "Best Picture, Directing, the four acting awards & the two screenplay awards \\u00b7 color = TMDB primary genre",
@@ -200,6 +207,46 @@ render_chart({
 })
 """))
 
+# ── Cell 4b — CUT 4: the original pre-genre count grid ───────────────────────
+cells.append(nbformat.v4.new_markdown_cell("""\
+## Cut 4 — Oscar wins by category, year by year (the original pre-genre count)
+
+This is the **original "cut 3" from the first exploration pass — before any genre
+enrichment**: a grid of the **6 competitive classes down the left × every ceremony
+year across the top**, each cell = the **count of competitive Oscar wins** for that
+class that year. **No genre is involved** — it is the plain award-count grid.
+
+It was deemed **"too wide to post"** the first time, because ~98 year columns of
+in-cell numbers are unreadable. The fix the owner asked for: render it with **no
+in-cell numbers and a color-scale legend** (`heatmap` `show_values=False`), so
+**color carries the count** instead of digits. The data comes from the prepared
+`chart_wins_class_by_year` table (`03-prepare` owns it); this cell only reads it.
+"""))
+
+cells.append(nbformat.v4.new_code_cell("""\
+# CUT 4 — consume the prepared pre-genre count grid read-only (03 built it).
+cut4_wins_class_by_year = con.execute(
+    "SELECT * FROM chart_wins_class_by_year ORDER BY class, year_int"
+).df()
+
+render_chart({
+    "type": "heatmap",
+    "table": cut4_wins_class_by_year,
+    "row_col": "class",
+    "col_col": "year_int",
+    "value_col": "wins",
+    "palette": "heatmap_teal",
+    "show_values": False,               # no in-cell numbers -> color-scale legend (dense ~98-col grid)
+    "legend_label": "wins",
+    "col_label_fmt": lambda y: f"'{int(y) % 100:02d}",
+    "title": "Oscar wins by category, year by year",
+    "subtitle": "Count of competitive wins per category each ceremony \\u00b7 color = number of wins",
+    "source": SOURCE,
+    "preset": "twitter_landscape",
+    # no filename -> display inline only (outputs/social is reserved for 06)
+})
+"""))
+
 # ── Cell 5 — framing notes ───────────────────────────────────────────────────
 cells.append(nbformat.v4.new_markdown_cell("""\
 ## Story framing — candidate angles for social charts
@@ -214,6 +261,10 @@ The genre lens is the interesting story the win-counts lacked:
    the major wins, and in which decades. Best supporting chart.
 3. **Best Picture genre mix by decade** — the headline category's genre story on
    its own.
+4. **Cut 4 — the original pre-genre count grid** (competitive wins by class ×
+   year) — re-added at the owner's request, rendered with a color-scale legend
+   instead of in-cell numbers so the ~98-column grid reads. Owner to validate it
+   here before the social lineup is settled.
 
 **Framing decisions awaiting owner sign-off** (no `06-viz-social` until confirmed):
 
