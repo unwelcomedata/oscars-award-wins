@@ -89,6 +89,10 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
 - **Known controversies / debates:** None material for a wins-by-category count.
   The only interpretive choices are the competitive-vs-honorary split and the
   category-normalization, both documented above and in the codebook.
+- **Partial current decade:** the **2020s column is an in-progress decade** as of
+  the 2026-10-08 retrieval (ceremonies through the 98th / 2025 only). Its lower
+  counts reflect fewer elapsed years, not a decline — read it as incomplete, and
+  any published chart carrying a 2020s column should say so.
 - **Notes:** `Year` must be parsed to a numeric ceremony year — for a slash span
   like `1927/28` take the latter 4-digit year (`1928`); a plain `2025` stays `2025`.
   `decade = (year_int // 10) * 10`. Multi-value fields (Nominees, NomineeIds) are
@@ -136,8 +140,14 @@ not applicable or unknown, write "N/A" or "unknown" so it's clear it was conside
   the genre TMDB assigns it today. Treat the genre as a consistent modern lens
   across all decades, not as how the film was marketed at the time.
 - **Known controversies / debates:** genre is inherently fuzzy and a film often
-  spans several; using only the first TMDB genre is a simplification. Rare genres
-  are binned into "Other" for legibility in the charts (see codebook).
+  spans several; using only the first TMDB genre is a simplification. Many winners
+  are legitimately multi-genre — e.g. *The Silence of the Lambs* is commonly tagged
+  Crime/Thriller/Horror and *Oppenheimer* Biography/Drama/History — but each is
+  charted under its single TMDB primary genre only. This caveat is carried in the
+  README prose above the charts (independent chart-validation recommendation,
+  2026-10-08) so a reader isn't surprised that a film they think of as another
+  genre shows as Drama. Rare genres are binned into "Other" for legibility (see
+  codebook).
 - **Notes:** `primary_genre` is populated for **major-award films only**; it is
   NULL for non-major wins in the export (documented in the codebook).
 - **Retrieved:** 2026-10-08
