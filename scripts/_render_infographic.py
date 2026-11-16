@@ -193,7 +193,7 @@ def build_tall():
           T(790, 1850, f"of {BP_N} Best Picture winners", 26, CHAR, "bold"),
           T(790, 1884, f"were Drama ({BP_DRAMA / BP_N * 100:.1f}%)", 26, CHAR)]
     o += legend(790, 1950, 34, 22, counts=BPC)
-    o += frame_bot(W, H, 90, 24, 18, 42, 72)
+    o += frame_bot(W, H, 90, 24, 17, 42, 72)
     o.append("</svg>")
     return "\n".join(o)
 
