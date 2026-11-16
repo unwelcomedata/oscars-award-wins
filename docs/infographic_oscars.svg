@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @unwelcomedata - oscars-award-wins infographic. All marks computed from data/project.duckdb; see artifacts/INFOGRAPHIC-VALIDATION.md -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2400" viewBox="0 0 1200 2400" font-family="Helvetica, Arial, sans-serif">
+<rect width="1200" height="2400" fill="#FBF8F0"/>
+<rect x="0" y="0" width="1200" height="300" fill="#003049"/>
+<text x="80" y="130" fill="#FFFFFF" font-size="76" font-weight="bold" text-anchor="start" >Oscar Wins by Genre</text>
+<text x="80" y="195" fill="#94D2BD" font-size="40" font-weight="bold" text-anchor="start" >Six in ten major-award wins went to Drama</text>
+<text x="80" y="245" fill="#E9D8A6" font-size="26" font-weight="normal" text-anchor="start" >756 wins across the 8 major Oscars, 1928–2025, grouped by each winning film's genre.</text>
+<text x="80" y="385" fill="#003049" font-size="34" font-weight="bold" text-anchor="start" >Major-award wins by genre</text>
+<text x="80" y="420" fill="#6B7280" font-size="22" font-weight="normal" text-anchor="start" >756 wins across Best Picture, Directing, the four acting awards and both screenplay awards.</text>
+<text x="80" y="520" fill="#003049" font-size="96" font-weight="bold" text-anchor="start" >454</text>
+<text x="330" y="480" fill="#1F2937" font-size="30" font-weight="bold" text-anchor="start" >of 756 major-award wins</text>
+<text x="330" y="518" fill="#1F2937" font-size="30" font-weight="normal" text-anchor="start" >went to Drama (60.1%)</text>
+<!-- Drama 454 -> 660.0 (= 454/454 * 660) -->
+<text x="218" y="594.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Drama</text>
+<rect data-kind="genre-bar" data-genre="Drama" data-v="454" data-w="660.0" x="230" y="570" width="660.0" height="34" rx="3" fill="#003049"/>
+<text x="900" y="594.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >454  ·  60%</text>
+<!-- Comedy 111 -> 161.37 (= 111/454 * 660) -->
+<text x="218" y="640.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Comedy</text>
+<rect data-kind="genre-bar" data-genre="Comedy" data-v="111" data-w="161.37" x="230" y="616" width="161.37" height="34" rx="3" fill="#EE9B00"/>
+<text x="401.37" y="640.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >111  ·  15%</text>
+<!-- Other 56 -> 81.41 (= 56/454 * 660) -->
+<text x="218" y="686.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Other</text>
+<rect data-kind="genre-bar" data-genre="Other" data-v="56" data-w="81.41" x="230" y="662" width="81.41" height="34" rx="3" fill="#9CA3AF"/>
+<text x="321.41" y="686.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >56  ·  7%</text>
+<!-- Crime 49 -> 71.23 (= 49/454 * 660) -->
+<text x="218" y="732.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Crime</text>
+<rect data-kind="genre-bar" data-genre="Crime" data-v="49" data-w="71.23" x="230" y="708" width="71.23" height="34" rx="3" fill="#0A9396"/>
+<text x="311.23" y="732.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >49  ·  6%</text>
+<!-- Adventure 19 -> 27.62 (= 19/454 * 660) -->
+<text x="218" y="778.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Adventure</text>
+<rect data-kind="genre-bar" data-genre="Adventure" data-v="19" data-w="27.62" x="230" y="754" width="27.62" height="34" rx="3" fill="#94D2BD"/>
+<text x="267.62" y="778.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >19  ·  3%</text>
+<!-- Romance 19 -> 27.62 (= 19/454 * 660) -->
+<text x="218" y="824.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Romance</text>
+<rect data-kind="genre-bar" data-genre="Romance" data-v="19" data-w="27.62" x="230" y="800" width="27.62" height="34" rx="3" fill="#BB3E03"/>
+<text x="267.62" y="824.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >19  ·  3%</text>
+<!-- History 17 -> 24.71 (= 17/454 * 660) -->
+<text x="218" y="870.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >History</text>
+<rect data-kind="genre-bar" data-genre="History" data-v="17" data-w="24.71" x="230" y="846" width="24.71" height="34" rx="3" fill="#CA6702"/>
+<text x="264.71" y="870.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >17  ·  2%</text>
+<!-- Action 16 -> 23.26 (= 16/454 * 660) -->
+<text x="218" y="916.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Action</text>
+<rect data-kind="genre-bar" data-genre="Action" data-v="16" data-w="23.26" x="230" y="892" width="23.26" height="34" rx="3" fill="#005F73"/>
+<text x="263.26" y="916.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >16  ·  2%</text>
+<!-- Thriller 15 -> 21.81 (= 15/454 * 660) -->
+<text x="218" y="962.48" fill="#003049" font-size="24" font-weight="bold" text-anchor="end" >Thriller</text>
+<rect data-kind="genre-bar" data-genre="Thriller" data-v="15" data-w="21.81" x="230" y="938" width="21.81" height="34" rx="3" fill="#AE2012"/>
+<text x="261.81" y="962.48" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >15  ·  2%</text>
+<text x="80" y="998" fill="#6B7280" font-size="17" font-weight="normal" text-anchor="start" >Other = the seven less-common genres (Western, War, Music, Horror, Mystery, Fantasy, Science Fiction).</text>
+<line x1="80" y1="1040" x2="1120" y2="1040" stroke="#E9D8A6" stroke-width="3"/>
+<text x="80" y="1105" fill="#003049" font-size="34" font-weight="bold" text-anchor="start" >Drama's share of major-award wins, by decade</text>
+<text x="80" y="1140" fill="#6B7280" font-size="22" font-weight="normal" text-anchor="start" >Drama wins ÷ all major-award wins in the decade. Dashed line = 50%.</text>
+<line x1="110" y1="1350.0" x2="1118.5" y2="1350.0" stroke="#EE9B00" stroke-width="2" stroke-dasharray="6 6"/>
+<text x="106" y="1355" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="end" >50%</text>
+<line x1="110" y1="1500" x2="1118.5" y2="1500" stroke="#D1D5DB" stroke-width="2"/>
+<!-- 1920s Drama 7/9 = 0.7778 -> h 233.33 -->
+<rect data-kind="decade-col" data-decade="1920" data-num="7" data-den="9" data-h="233.33" x="131.75" y="1266.67" width="60" height="233.33" rx="3" fill="#003049"/>
+<text x="161.75" y="1258.67" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >78%</text>
+<text x="161.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1920s</text>
+<text x="161.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >9 wins</text>
+<!-- 1930s Drama 34/59 = 0.5763 -> h 172.88 -->
+<rect data-kind="decade-col" data-decade="1930" data-num="34" data-den="59" data-h="172.88" x="223.25" y="1327.12" width="60" height="172.88" rx="3" fill="#003049"/>
+<text x="253.25" y="1319.12" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >58%</text>
+<text x="253.25" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1930s</text>
+<text x="253.25" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >59 wins</text>
+<!-- 1940s Drama 50/79 = 0.6329 -> h 189.87 -->
+<rect data-kind="decade-col" data-decade="1940" data-num="50" data-den="79" data-h="189.87" x="314.75" y="1310.13" width="60" height="189.87" rx="3" fill="#003049"/>
+<text x="344.75" y="1302.13" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >63%</text>
+<text x="344.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1940s</text>
+<text x="344.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >79 wins</text>
+<!-- 1950s Drama 43/80 = 0.5375 -> h 161.25 -->
+<rect data-kind="decade-col" data-decade="1950" data-num="43" data-den="80" data-h="161.25" x="406.25" y="1338.75" width="60" height="161.25" rx="3" fill="#003049"/>
+<text x="436.25" y="1330.75" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >54%</text>
+<text x="436.25" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1950s</text>
+<text x="436.25" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 1960s Drama 47/81 = 0.5802 -> h 174.07 -->
+<rect data-kind="decade-col" data-decade="1960" data-num="47" data-den="81" data-h="174.07" x="497.75" y="1325.93" width="60" height="174.07" rx="3" fill="#003049"/>
+<text x="527.75" y="1317.93" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >58%</text>
+<text x="527.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1960s</text>
+<text x="527.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >81 wins</text>
+<!-- 1970s Drama 44/80 = 0.5500 -> h 165.0 -->
+<rect data-kind="decade-col" data-decade="1970" data-num="44" data-den="80" data-h="165.0" x="589.25" y="1335" width="60" height="165.0" rx="3" fill="#003049"/>
+<text x="619.25" y="1327" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >55%</text>
+<text x="619.25" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1970s</text>
+<text x="619.25" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 1980s Drama 57/80 = 0.7125 -> h 213.75 -->
+<rect data-kind="decade-col" data-decade="1980" data-num="57" data-den="80" data-h="213.75" x="680.75" y="1286.25" width="60" height="213.75" rx="3" fill="#003049"/>
+<text x="710.75" y="1278.25" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >71%</text>
+<text x="710.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1980s</text>
+<text x="710.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 1990s Drama 41/80 = 0.5125 -> h 153.75 -->
+<rect data-kind="decade-col" data-decade="1990" data-num="41" data-den="80" data-h="153.75" x="772.25" y="1346.25" width="60" height="153.75" rx="3" fill="#003049"/>
+<text x="802.25" y="1338.25" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >51%</text>
+<text x="802.25" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >1990s</text>
+<text x="802.25" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 2000s Drama 50/80 = 0.6250 -> h 187.5 -->
+<rect data-kind="decade-col" data-decade="2000" data-num="50" data-den="80" data-h="187.5" x="863.75" y="1312.5" width="60" height="187.5" rx="3" fill="#003049"/>
+<text x="893.75" y="1304.5" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >62%</text>
+<text x="893.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >2000s</text>
+<text x="893.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 2010s Drama 51/80 = 0.6375 -> h 191.25 -->
+<rect data-kind="decade-col" data-decade="2010" data-num="51" data-den="80" data-h="191.25" x="955.25" y="1308.75" width="60" height="191.25" rx="3" fill="#003049"/>
+<text x="985.25" y="1300.75" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >64%</text>
+<text x="985.25" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >2010s</text>
+<text x="985.25" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >80 wins</text>
+<!-- 2020s Drama 30/48 = 0.6250 -> h 187.5 -->
+<rect data-kind="decade-col" data-decade="2020" data-num="30" data-den="48" data-h="187.5" x="1046.75" y="1312.5" width="60" height="187.5" rx="3" fill="#003049"/>
+<text x="1076.75" y="1304.5" fill="#003049" font-size="22" font-weight="bold" text-anchor="middle" >62%</text>
+<text x="1076.75" y="1528" fill="#1F2937" font-size="20" font-weight="bold" text-anchor="middle" >2020s</text>
+<text x="1076.75" y="1556" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="middle" >48 wins</text>
+<text x="80" y="1582" fill="#6B7280" font-size="18" font-weight="normal" text-anchor="start" >1920s = 1928–29 only. 2020s = 2020–25 only (partial decades).</text>
+<line x1="80" y1="1625" x2="1120" y2="1625" stroke="#E9D8A6" stroke-width="3"/>
+<text x="80" y="1690" fill="#003049" font-size="34" font-weight="bold" text-anchor="start" >Best Picture winners by genre, year by year</text>
+<text x="80" y="1725" fill="#6B7280" font-size="22" font-weight="normal" text-anchor="start" >98 winners, one dot per year. Each row is a decade, read left to right from year 0 to year 9.</text>
+<text x="80" y="1800.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1920s</text>
+<text x="80" y="1846.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1930s</text>
+<text x="80" y="1892.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1940s</text>
+<text x="80" y="1938.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1950s</text>
+<text x="80" y="1984.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1960s</text>
+<text x="80" y="2030.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1970s</text>
+<text x="80" y="2076.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1980s</text>
+<text x="80" y="2122.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >1990s</text>
+<text x="80" y="2168.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >2000s</text>
+<text x="80" y="2214.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >2010s</text>
+<text x="80" y="2260.55" fill="#6B7280" font-size="22" font-weight="bold" text-anchor="start" >2020s</text>
+<circle data-kind="bp-dot" data-year="1928" data-genre="Drama" cx="666" cy="1790" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1929" data-genre="Other" cx="718" cy="1790" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1930" data-genre="Drama" cx="250" cy="1836" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1931" data-genre="Other" cx="302" cy="1836" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1932" data-genre="Drama" cx="354" cy="1836" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1933" data-genre="Drama" cx="406" cy="1836" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1934" data-genre="Comedy" cx="458" cy="1836" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1935" data-genre="Adventure" cx="510" cy="1836" r="19" fill="#94D2BD"/>
+<circle data-kind="bp-dot" data-year="1936" data-genre="Other" cx="562" cy="1836" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1937" data-genre="Drama" cx="614" cy="1836" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1938" data-genre="Comedy" cx="666" cy="1836" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1939" data-genre="Drama" cx="718" cy="1836" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1940" data-genre="Other" cx="250" cy="1882" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1941" data-genre="Drama" cx="302" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1942" data-genre="Drama" cx="354" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1943" data-genre="Drama" cx="406" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1944" data-genre="Drama" cx="458" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1945" data-genre="Drama" cx="510" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1946" data-genre="Drama" cx="562" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1947" data-genre="Drama" cx="614" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1948" data-genre="Drama" cx="666" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1949" data-genre="Drama" cx="718" cy="1882" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1950" data-genre="Drama" cx="250" cy="1928" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1951" data-genre="Other" cx="302" cy="1928" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1952" data-genre="Drama" cx="354" cy="1928" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1953" data-genre="Other" cx="406" cy="1928" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1954" data-genre="Crime" cx="458" cy="1928" r="19" fill="#0A9396"/>
+<circle data-kind="bp-dot" data-year="1955" data-genre="Drama" cx="510" cy="1928" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1956" data-genre="Adventure" cx="562" cy="1928" r="19" fill="#94D2BD"/>
+<circle data-kind="bp-dot" data-year="1957" data-genre="Drama" cx="614" cy="1928" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1958" data-genre="Comedy" cx="666" cy="1928" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1959" data-genre="History" cx="718" cy="1928" r="19" fill="#CA6702"/>
+<circle data-kind="bp-dot" data-year="1960" data-genre="Comedy" cx="250" cy="1974" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1961" data-genre="Crime" cx="302" cy="1974" r="19" fill="#0A9396"/>
+<circle data-kind="bp-dot" data-year="1962" data-genre="Adventure" cx="354" cy="1974" r="19" fill="#94D2BD"/>
+<circle data-kind="bp-dot" data-year="1963" data-genre="Comedy" cx="406" cy="1974" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1964" data-genre="Comedy" cx="458" cy="1974" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1965" data-genre="Drama" cx="510" cy="1974" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1966" data-genre="Drama" cx="562" cy="1974" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1967" data-genre="Crime" cx="614" cy="1974" r="19" fill="#0A9396"/>
+<circle data-kind="bp-dot" data-year="1968" data-genre="Drama" cx="666" cy="1974" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1969" data-genre="Drama" cx="718" cy="1974" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1970" data-genre="Other" cx="250" cy="2020" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1971" data-genre="Action" cx="302" cy="2020" r="19" fill="#005F73"/>
+<circle data-kind="bp-dot" data-year="1972" data-genre="Drama" cx="354" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1973" data-genre="Comedy" cx="406" cy="2020" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1974" data-genre="Drama" cx="458" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1975" data-genre="Drama" cx="510" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1976" data-genre="Drama" cx="562" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1977" data-genre="Comedy" cx="614" cy="2020" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1978" data-genre="Drama" cx="666" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1979" data-genre="Drama" cx="718" cy="2020" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1980" data-genre="Drama" cx="250" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1981" data-genre="Drama" cx="302" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1982" data-genre="Drama" cx="354" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1983" data-genre="Drama" cx="406" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1984" data-genre="Drama" cx="458" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1985" data-genre="History" cx="510" cy="2066" r="19" fill="#CA6702"/>
+<circle data-kind="bp-dot" data-year="1986" data-genre="Drama" cx="562" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1987" data-genre="Drama" cx="614" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1988" data-genre="Drama" cx="666" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1989" data-genre="Drama" cx="718" cy="2066" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1990" data-genre="Adventure" cx="250" cy="2112" r="19" fill="#94D2BD"/>
+<circle data-kind="bp-dot" data-year="1991" data-genre="Crime" cx="302" cy="2112" r="19" fill="#0A9396"/>
+<circle data-kind="bp-dot" data-year="1992" data-genre="Other" cx="354" cy="2112" r="19" fill="#9CA3AF"/>
+<circle data-kind="bp-dot" data-year="1993" data-genre="Drama" cx="406" cy="2112" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1994" data-genre="Comedy" cx="458" cy="2112" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="1995" data-genre="Drama" cx="510" cy="2112" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1996" data-genre="Drama" cx="562" cy="2112" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1997" data-genre="Drama" cx="614" cy="2112" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="1998" data-genre="Romance" cx="666" cy="2112" r="19" fill="#BB3E03"/>
+<circle data-kind="bp-dot" data-year="1999" data-genre="Drama" cx="718" cy="2112" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2000" data-genre="Action" cx="250" cy="2158" r="19" fill="#005F73"/>
+<circle data-kind="bp-dot" data-year="2001" data-genre="Drama" cx="302" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2002" data-genre="Comedy" cx="354" cy="2158" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="2003" data-genre="Adventure" cx="406" cy="2158" r="19" fill="#94D2BD"/>
+<circle data-kind="bp-dot" data-year="2004" data-genre="Drama" cx="458" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2005" data-genre="Drama" cx="510" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2006" data-genre="Drama" cx="562" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2007" data-genre="Crime" cx="614" cy="2158" r="19" fill="#0A9396"/>
+<circle data-kind="bp-dot" data-year="2008" data-genre="Drama" cx="666" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2009" data-genre="Drama" cx="718" cy="2158" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2010" data-genre="Drama" cx="250" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2011" data-genre="Drama" cx="302" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2012" data-genre="Drama" cx="354" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2013" data-genre="Drama" cx="406" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2014" data-genre="Drama" cx="458" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2015" data-genre="Drama" cx="510" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2016" data-genre="Drama" cx="562" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2017" data-genre="Drama" cx="614" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2018" data-genre="Drama" cx="666" cy="2204" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2019" data-genre="Comedy" cx="718" cy="2204" r="19" fill="#EE9B00"/>
+<circle data-kind="bp-dot" data-year="2020" data-genre="Drama" cx="250" cy="2250" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2021" data-genre="Drama" cx="302" cy="2250" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2022" data-genre="Action" cx="354" cy="2250" r="19" fill="#005F73"/>
+<circle data-kind="bp-dot" data-year="2023" data-genre="Drama" cx="406" cy="2250" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2024" data-genre="Drama" cx="458" cy="2250" r="19" fill="#003049"/>
+<circle data-kind="bp-dot" data-year="2025" data-genre="Thriller" cx="510" cy="2250" r="19" fill="#AE2012"/>
+<text x="790" y="1810" fill="#003049" font-size="96" font-weight="bold" text-anchor="start" >62</text>
+<text x="790" y="1850" fill="#1F2937" font-size="26" font-weight="bold" text-anchor="start" >of 98 Best Picture winners</text>
+<text x="790" y="1884" fill="#1F2937" font-size="26" font-weight="normal" text-anchor="start" >were Drama (63.3%)</text>
+<circle cx="801" cy="1942.3" r="11" fill="#003049"/>
+<text x="820.8" y="1950" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Drama  62</text>
+<circle cx="801" cy="1976.3" r="11" fill="#EE9B00"/>
+<text x="820.8" y="1984" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Comedy  11</text>
+<circle cx="801" cy="2010.3" r="11" fill="#9CA3AF"/>
+<text x="820.8" y="2018" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Other  8</text>
+<circle cx="801" cy="2044.3" r="11" fill="#94D2BD"/>
+<text x="820.8" y="2052" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Adventure  5</text>
+<circle cx="801" cy="2078.3" r="11" fill="#0A9396"/>
+<text x="820.8" y="2086" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Crime  5</text>
+<circle cx="801" cy="2112.3" r="11" fill="#005F73"/>
+<text x="820.8" y="2120" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Action  3</text>
+<circle cx="801" cy="2146.3" r="11" fill="#CA6702"/>
+<text x="820.8" y="2154" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >History  2</text>
+<circle cx="801" cy="2180.3" r="11" fill="#BB3E03"/>
+<text x="820.8" y="2188" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Romance  1</text>
+<circle cx="801" cy="2214.3" r="11" fill="#AE2012"/>
+<text x="820.8" y="2222" fill="#1F2937" font-size="22" font-weight="bold" text-anchor="start" >Thriller  1</text>
+<rect x="0" y="2310" width="1200" height="90" fill="#003049"/>
+<text x="80" y="2352" fill="#FFFFFF" font-size="24" font-weight="bold" text-anchor="start" >@unwelcomedata</text>
+<text x="80" y="2382" fill="#94D2BD" font-size="18" font-weight="normal" text-anchor="start" >Source: AMPAS Awards Database (via DLu/oscar_data) · genre = first-listed TMDB genre of the winning film · 8 major awards, 1928–2025</text>
+</svg>
