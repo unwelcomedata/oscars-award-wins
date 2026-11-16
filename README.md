@@ -12,6 +12,8 @@ the tilt is sharpest for Best Picture.
 
 _Click any chart to open it at full resolution._
 
+[![Oscar wins by genre — infographic](docs/infographic_oscars.png)](docs/infographic_oscars.png)
+
 ## How it was measured
 
 The metric is **major-award WINS**, each colored by (or counted per) the winning
